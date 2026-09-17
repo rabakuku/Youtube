@@ -1,4 +1,3 @@
-To turn your `README.md` into an interactive, sequential runbook, organize it as a numbered execution pipeline where each stage links directly to its file in your repository, states the required prerequisite commands, and gives the user immediate verification commands before moving to the next step. Removing the VIP simplifies the architecture: FortiGate (`192.168.10.1`) communicates directly across the trusted LAN subnet to Alpine Linux (`192.168.10.2:80`) using its internal routing table and Automation Stitch engine.
 
 ```markdown
 <!-- filepath: README.md -->
