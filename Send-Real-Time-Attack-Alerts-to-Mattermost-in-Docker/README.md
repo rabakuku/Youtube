@@ -279,7 +279,8 @@ diagnose automation test Stitch_FortiGate_to_Mattermost
 *Expected Output:* FortiGate dispatches the HTTP payload to `192.168.10.2:80`, and a test notification immediately renders inside the `#security-alerts` channel.
 2. **Verify LAN Packet Flow:**
 ```fortios
-diagnose sniffer packet port2 'host 192.168.10.2 and port 80' 4 0 l
+diagnose debug application autod -1
+diagnose debug enable
 
 ```
 
