@@ -3,7 +3,7 @@
 <!-- filepath: README.md -->
 # FortiGate Real-Time Attack Alert Automation to Mattermost in Docker
 
-[![FortiOS](https://img.shields.io/badge/FortiOS-7.x-orange.svg)](https://docs.fortinet.com/)
+[![FortiOS](https://img.shields.io/badge/FortiOS-7.x-orange.svg)]
 [![Docker](https://img.shields.io/badge/Docker-Engine%20v24+-blue.svg)](https://docs.docker.com/)
 [![Alpine Linux](https://img.shields.io/badge/Alpine%20Linux-v3.19%20%2F%20v3.20-blue.svg)](https://alpinelinux.org/)
 [![Mattermost](https://img.shields.io/badge/Mattermost-Team%20Edition-0058CC.svg)](https://mattermost.com/)
