@@ -232,7 +232,7 @@ config system automation-action
         set protocol http
         set uri "hooks/YOUR_HOOK_ID_HERE"
         set port 80
-        set http-body "{\"text\": \":warning: **[FORTIGATE SECURITY ALERT]** Threat intercepted!\\n- **Firewall:** %%log.devname%%\\n- **Threat:** %%log.attack%%\\n- **Source IP:** %%log.srcip%%\\n- **Destination IP:** %%log.dstip%%\\n- **Action:** %%log.action%%\\n- **Severity:** %%log.severity%%\"}"
+        set http-body "{\"text\": \"warning\"}"
         config http-headers
             edit 1
                 set key "Content-Type"
