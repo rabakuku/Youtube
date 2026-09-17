@@ -78,7 +78,7 @@ Execute the steps below sequentially. Each step links directly to the detailed c
 Before launching containers, configure Alpine Linux repositories, install Docker Engine with the Compose plugin, grant user socket permissions, and register the OpenRC service.
 
 1. Open and follow the guide:
-👉 **[Docs/install-docker.md](https://www.google.com/search?q=https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/Docs/install-docker.md)**
+👉 **[Docs/install-docker.md](https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/Docs/install-docker.md)**
 2. Execute the verification commands on `192.168.10.2`:
 ```bash
 rc-service docker status
@@ -98,8 +98,8 @@ Launch the containerized ChatOps stack. Mattermost binds directly to host port `
 1. Open and review the architecture guide:
 👉 **[Docs/Configuration.md](https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/Docs/Configuration.md)**
 2. Navigate to the compose directory:
-👉 **[compose/docker-compose.yml](https://www.google.com/search?q=https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/compose/docker-compose.yml)**
-👉 **[compose/.env.example](https://www.google.com/search?q=https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/compose/.env.example)**
+👉 **[compose/docker-compose.yml](https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/compose/docker-compose.yml)**
+👉 **[compose/.env.example](https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/compose/.env.example)**
 3. Deploy the containers:
 ```bash
 cd compose
@@ -130,7 +130,7 @@ curl.exe -I [http://192.168.10.2:80](http://192.168.10.2:80)
 Configure FortiGate (`192.168.10.1`) to inspect traffic, drop perimeter attacks, and fire an automated HTTP webhook notification directly across the LAN to the Alpine host.
 
 1. Open and follow the step-by-step CLI or GUI instructions:
-👉 **[Docs/Fortinet.md](https://www.google.com/search?q=https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/Docs/Fortinet.md)**
+👉 **[Docs/Fortinet.md](https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/Docs/Fortinet.md)**
 2. Main configurations applied in this step:
 * **Firewall Address Objects:** Defining `HOST_Alpine_Mattermost` (`192.168.10.2`) and `NET_LAN_192.168.10.0` (`192.168.10.0/24`).
 * **LAN Firewall Policies:** Permitting local traffic inspection and client access.
@@ -169,7 +169,7 @@ diagnose sniffer packet port2 'host 192.168.10.2 and port 80' 4 0 l
 For automated lab deployments and teardowns, use the bundled shell scripts:
 
 * **Automated Provisioning:**
-👉 **[scripts/setup.sh](https://www.google.com/search?q=https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/scripts/setup.sh)**
+👉 **[scripts/setup.sh](https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/scripts/setup.sh)**
 Installs dependencies, configures OpenRC, deploys the compose stack, and checks health automatically:
 ```bash
 chmod +x scripts/setup.sh
@@ -179,7 +179,7 @@ chmod +x scripts/setup.sh
 
 
 * **Full Teardown & Reset:**
-👉 **[scripts/rollback.sh](https://www.google.com/search?q=https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/scripts/rollback.sh)**
+👉 **[scripts/rollback.sh](https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/scripts/rollback.sh)**
 Stops containers, deletes bridge networks, and purges all persistent database volumes:
 ```bash
 chmod +x scripts/rollback.sh
