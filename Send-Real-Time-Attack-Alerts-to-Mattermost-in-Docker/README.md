@@ -260,7 +260,23 @@ config system automation-stitch
 end
 
 ```
+3.1. Other HTTP Body Formats
+1. Compact Single-Line Alert
+```fortios
+{"text": ":warning: **FortiGate Alert:** Event `%%log.logid%%` triggered from `%%log.srcip%%` -> `%%log.dstip%%` (Action: `%%log.action%%`)"}
+```
 
+2. Clean Multi-Line Markdown Card
+
+```fortios
+{"text": "### :rotating_light: FortiGate Threat Detection\n* **Log ID:** `%%log.logid%%`\n* **Message:** %%log.msg%%\n* **Source IP:** `%%log.srcip%%` (Port: `%%log.srcport%%`)\n* **Destination IP:** `%%log.dstip%%` (Port: `%%log.dstport%%`)\n* **Action:** `%%log.action%%`\n* **Firewall Policy:** `%%log.policyid%%`"}
+```
+
+3. Raw Log Dump (Useful for Debugging)
+
+```fortios
+{"text": ":warning: **Trigger Log Dump:**\n```json\n%%log%%\n```"}
+```
 
 
 ---
