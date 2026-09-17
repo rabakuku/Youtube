@@ -87,10 +87,7 @@ This project delivers a completely automated, zero-trust pipeline:
 │   ├── Fortinet.md
 │   └── main.md
 ├── presentation/
-│   ├── PowerPoint_Example.html
-│   └── Teleprompter.md
-├── marketing/
-│   └── YouTube-Marketing.md
+│   ├── PowerPoint.html
 └── README.md
 
 ```
