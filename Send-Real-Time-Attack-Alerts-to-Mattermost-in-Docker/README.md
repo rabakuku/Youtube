@@ -1,13 +1,14 @@
 
-```markdown
-<!-- filepath: README.md -->
-# FortiGate Real-Time Attack Alert Automation to Mattermost in Docker
-
 [![FortiOS](https://img.shields.io/badge/FortiOS-7.x-orange.svg)](https://docs.fortinet.com/)
 [![Docker](https://img.shields.io/badge/Docker-Engine%20v24+-blue.svg)](https://docs.docker.com/)
 [![Alpine Linux](https://img.shields.io/badge/Alpine%20Linux-v3.19%20%2F%20v3.20-blue.svg)](https://alpinelinux.org/)
 [![Mattermost](https://img.shields.io/badge/Mattermost-Team%20Edition-0058CC.svg)](https://mattermost.com/)
 [![Security Policy](https://img.shields.io/badge/Zero--Trust-Enforced-red.svg)](#)
+```markdown
+<!-- filepath: README.md -->
+# FortiGate Real-Time Attack Alert Automation to Mattermost in Docker
+
+
 A step-by-step implementation guide to deploying a self-hosted Mattermost ChatOps engine on Alpine Linux and connecting FortiOS Automation Stitches to receive sub-second threat notifications directly over your trusted local network.
 
 ---
