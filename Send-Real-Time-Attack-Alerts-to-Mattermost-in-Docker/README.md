@@ -6,6 +6,7 @@
   <img src="https://img.shields.io/badge/Mattermost-Team%20Edition-0058CC.svg" alt="Mattermost" />
   <img src="https://img.shields.io/badge/Zero--Trust-Enforced-red.svg" alt="Security Policy" />
 </p>
+
 ```markdown
 <!-- filepath: README.md -->
 # FortiGate Real-Time Attack Alert Automation to Mattermost in Docker
