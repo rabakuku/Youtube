@@ -130,7 +130,7 @@ config system automation-trigger
     edit "Trigger_IPS_Attack_Alert"
         set event-type event-log
         set logid 0419016384
-        set description "Triggers when an IPS intrusion detection event is logged"
+        set description "Firewall IPS Threat Event"
     next
 end
 
@@ -138,16 +138,15 @@ config system automation-action
     edit "Action_Mattermost_Webhook"
         set action-type webhook
         set protocol http
-        set uri "hooks/YOUR_MATTERMOST_HOOK_ID_HERE"
-        set http-body "{\"text\": \":warning: **[FORTIGATE SECURITY ALERT]** Threat detected!\\n- **Firewall:** %%log.devname%%\\n- **Threat:** %%log.attack%%\\n- **Source IP:** %%log.srcip%%\\n- **Destination IP:** %%log.dstip%%\\n- **Action:** %%log.action%%\\n- **Severity:** %%log.severity%%\"}"
+        set uri "hooks/YOUR_HOOK_ID_HERE"
         set port 80
+        set http-body "{\"text\": \"warning\"}"
         config http-headers
             edit 1
                 set key "Content-Type"
                 set value "application/json"
             next
         end
-        set comment "Dispatches threat alert JSON payload to Mattermost on port 80"
     next
 end
 
@@ -168,6 +167,23 @@ config system automation-stitch
     next
 end
 
+```
+3.1. Other HTTP Body Formats
+1. Compact Single-Line Alert
+```fortios
+{"text": ":warning: **FortiGate Alert:** Event `%%log.logid%%` triggered from `%%log.srcip%%` -> `%%log.dstip%%` (Action: `%%log.action%%`)"}
+```
+
+2. Clean Multi-Line Markdown Card
+
+```fortios
+{"text": "### :rotating_light: FortiGate Admin Login Failure\n* **Log ID:** `%%log.logid%%`\n* **Target Admin:** `%%log.user%%`\n* **Interface / Service:** `%%log.ui%%`\n* **Source IP:** `%%log.srcip%%`\n* **Destination IP:** `%%log.dstip%%`\n* **Status / Reason:** `%%log.action%%` (%%log.reason%%)\n* **Message:** %%log.msg%%"}
+```
+
+3. Raw Log Dump (Useful for Debugging)
+
+```fortios
+{"text": "### :warning: FortiGate Log Dump\n```\nDate/Time : %%log.date%% %%log.time%%\nDevice    : %%log.devname%% (%%log.devid%%)\nLog ID    : %%log.logid%% (%%log.logdesc%%)\nUser      : %%log.user%%\nUI/Method : %%log.ui%%\nSource IP : %%log.srcip%%\nDest IP   : %%log.dstip%%\nStatus    : %%log.action%% / %%log.status%% (%%log.reason%%)\nMessage   : %%log.msg%%\n```"}
 ```
 
 ---
@@ -209,7 +225,16 @@ end
 
 ---
 
-## 4. Zero-Trust Verification Blocker
+
+## 4. Zero-Trust Verification & Troubleshooting
+
+
+The best is to diag the autod
+
+```fortios
+diagnose debug application autod -1
+diagnose debug enable
+```
 
 Before marking Stage 4 complete, execute and inspect these diagnostic commands in the FortiOS CLI:
 
