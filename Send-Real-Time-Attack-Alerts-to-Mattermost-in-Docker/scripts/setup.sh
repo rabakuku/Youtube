@@ -2,8 +2,9 @@
 # filepath: scripts/setup.sh
 # ==============================================================================
 # Script Name : setup.sh
-# Description : Automated host provisioning, environment validation, file retrieval,
+# Description : Automated OS verification, host provisioning, repository retrieval,
 #               and container stack deployment for Mattermost on Alpine Linux.
+# Target OS   : Alpine Linux v3.19+ (Strictly Enforced)
 # Repository  : https://github.com/rabakuku/Youtube/tree/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker
 # ==============================================================================
 
@@ -13,6 +14,7 @@ GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m'
 
 log_info() {
@@ -29,13 +31,43 @@ log_err() {
 
 # 1. Privilege Verification
 if [ "$(id -u)" -ne 0 ]; then
-    log_err "This deployment script must be run as root. Run with sudo or switch to root."
+    log_err "This deployment script must be run as root. Execute with sudo or switch to root."
     exit 1
 fi
 
-log_info "Starting Automated Deployment Pipeline for Mattermost Alert Automation..."
+# 2. Strict Operating System Verification Gate
+log_info "Verifying host operating system compatibility..."
 
-# 2. Alpine Repository & Package Dependency Check
+if [ ! -f /etc/os-release ]; then
+    log_err "Cannot verify operating system (/etc/os-release missing)."
+    log_err "This script strictly requires Alpine Linux. Aborting installation."
+    exit 1
+fi
+
+# Source os-release parameters
+. /etc/os-release
+
+if [ "$ID" != "alpine" ]; then
+    printf "\n"
+    log_err "======================================================================"
+    log_err " INCOMPATIBLE OPERATING SYSTEM DETECTED"
+    log_err "======================================================================"
+    log_err "Detected OS : ${PRETTY_NAME:-$ID}"
+    log_err "Required OS : Alpine Linux (apk + OpenRC)"
+    printf "\n"
+    log_warn "Why this failed:"
+    printf "  - This automation stack utilizes Alpine's 'apk' package manager and\n"
+    printf "    'OpenRC' init service controls (rc-update, rc-service).\n"
+    printf "  - Other distributions like Ubuntu/Debian (apt + systemd) or RHEL/Rocky\n"
+    printf "    (dnf + systemd) require different package names and service managers.\n"
+    printf "\n"
+    log_err "Installation terminated. Please run this script on an Alpine Linux host."
+    exit 1
+fi
+
+log_info "Operating system confirmed: Alpine Linux (${VERSION_ID:-release}). Proceeding..."
+
+# 3. Alpine Community Repository Enablement
 if [ -f /etc/apk/repositories ]; then
     if ! grep -q "^http.*/community" /etc/apk/repositories; then
         log_info "Enabling Alpine Community repository in /etc/apk/repositories..."
@@ -43,39 +75,38 @@ if [ -f /etc/apk/repositories ]; then
     fi
     log_info "Updating local package index..."
     apk update
-    log_info "Installing Docker, Containerd, Compose plugin, and networking utilities..."
-    apk add --no-cache \
-        docker \
-        docker-cli-compose \
-        containerd \
-        e2fsprogs \
-        iptables \
-        curl \
-        net-tools \
-        ca-certificates
 else
-    log_warn "/etc/apk/repositories not found. Assuming non-Alpine host or packages pre-installed."
+    log_err "/etc/apk/repositories is missing. Unable to proceed with package resolution."
+    exit 1
 fi
 
-# 3. OpenRC Service Check & Initialization
-if command -v rc-status >/dev/null 2>&1; then
-    log_info "Configuring Docker OpenRC service state..."
-    if ! rc-status boot 2>/dev/null | grep -q "docker"; then
-        rc-update add docker boot 2>/dev/null || true
-    fi
+# 4. Install Docker Engine, Runtime & Network Diagnostic Tools
+log_info "Installing Docker Engine, CLI Compose plugin, Containerd, and networking utilities..."
+apk add --no-cache \
+    docker \
+    docker-cli-compose \
+    containerd \
+    e2fsprogs \
+    iptables \
+    curl \
+    net-tools \
+    ca-certificates
 
-    if ! rc-service docker status 2>/dev/null | grep -q "started"; then
-        log_info "Starting Docker daemon..."
-        rc-service docker start
-    else
-        log_info "Docker daemon is already active."
-    fi
-elif command -v systemctl >/dev/null 2>&1; then
-    systemctl enable docker
-    systemctl start docker
+# 5. OpenRC Service Management
+log_info "Configuring Docker OpenRC service state..."
+if ! rc-status boot 2>/dev/null | grep -q "docker"; then
+    log_info "Adding Docker to 'boot' runlevel..."
+    rc-update add docker boot 2>/dev/null || true
 fi
 
-# 4. Resolve Base Directory & Prepare Compose Environment
+if ! rc-service docker status 2>/dev/null | grep -q "started"; then
+    log_info "Starting Docker daemon process..."
+    rc-service docker start
+else
+    log_info "Docker daemon is running and active."
+fi
+
+# 6. Resolve Workspace Directories
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BASE_DIR="$(cd "$SCRIPT_DIR/.." 2>/dev/null && pwd || echo "/opt/mattermost-stack")"
 COMPOSE_DIR="$BASE_DIR/compose"
@@ -86,15 +117,15 @@ cd "$COMPOSE_DIR"
 COMPOSE_RAW_URL="https://raw.githubusercontent.com/rabakuku/Youtube/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/compose/docker-compose.yml"
 ENV_RAW_URL="https://raw.githubusercontent.com/rabakuku/Youtube/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/compose/.env.example"
 
-# 5. Acquire docker-compose.yml
+# 7. Acquire docker-compose.yml
 if [ -f "docker-compose.yml" ]; then
-    log_info "Existing docker-compose.yml detected locally in $COMPOSE_DIR."
+    log_info "Local docker-compose.yml detected in $COMPOSE_DIR."
 else
     log_info "Fetching docker-compose.yml from GitHub repository..."
     if curl -fsSL "$COMPOSE_RAW_URL" -o docker-compose.yml; then
         log_info "Successfully downloaded docker-compose.yml."
     else
-        log_err "Failed to download docker-compose.yml from $COMPOSE_RAW_URL. Creating standard fallback configuration..."
+        log_warn "Remote download failed. Generating local standalone docker-compose.yml..."
         cat <<'EOF' > docker-compose.yml
 services:
   postgres:
@@ -191,7 +222,7 @@ EOF
     fi
 fi
 
-# 6. Environment Configuration Verification (.env)
+# 8. Environment Variable File (.env) Verification
 if [ ! -f ".env" ]; then
     if [ -f ".env.example" ]; then
         log_info "Creating .env from existing local .env.example..."
@@ -201,7 +232,7 @@ if [ ! -f ".env" ]; then
         if curl -fsSL "$ENV_RAW_URL" -o .env.example; then
             cp .env.example .env
         else
-            log_warn "Generating default production .env configuration..."
+            log_warn "Generating fallback production .env file..."
             cat <<'EOF' > .env
 POSTGRES_DB=mattermost
 POSTGRES_USER=mmuser
@@ -212,26 +243,26 @@ EOF
         fi
     fi
 else
-    log_info "Existing .env configuration confirmed."
+    log_info "Active .env configuration file detected."
 fi
 
-# 7. Check Port 80 Availability
+# 9. Port 80 Listener Conflict Check
 if netstat -tuln 2>/dev/null | grep -q ":80 "; then
-    log_warn "Port 80 is currently occupied. Inspecting process..."
+    log_warn "Port 80 is currently bound on the host interface. Inspecting process..."
     netstat -tulnp 2>/dev/null | grep ":80 " || true
-    log_err "Please free TCP port 80 before starting the Mattermost stack."
+    log_err "Port 80 is occupied. Terminate the conflicting listener before proceeding."
     exit 1
 fi
 
-# 8. Pull Container Images and Launch Stack
-log_info "Pulling official container images (mattermost-team-edition & postgres:15-alpine)..."
+# 10. Container Deployment via Docker Compose
+log_info "Pulling official container images..."
 docker compose pull
 
-log_info "Starting containers in detached mode..."
+log_info "Starting Mattermost and PostgreSQL containers in detached mode..."
 docker compose up -d
 
-# 9. Healthcheck Validation Loop
-log_info "Waiting for PostgreSQL and Mattermost healthchecks to report healthy..."
+# 11. Healthcheck Verification Loop
+log_info "Awaiting service health convergence..."
 
 RETRIES=15
 COUNT=0
@@ -251,19 +282,19 @@ while [ "$COUNT" -lt "$RETRIES" ]; do
     COUNT=$((COUNT + 1))
 done
 
-# 10. Operational Summary
+# 12. Final Validation Summary
 if [ "$HEALTHY" = true ]; then
     printf "\n"
     log_info "======================================================================"
-    log_info " Deployment Successful! Stack is operational."
+    log_info " Mattermost Security Automation Host Successfully Deployed!"
     log_info "======================================================================"
-    printf "${GREEN}Mattermost Web URL : ${NC}http://192.168.10.2:80\n"
-    printf "${GREEN}Database Endpoint  : ${NC}172.28.0.10:5432 (Internal Docker Network)\n"
-    printf "${GREEN}Container Status   : ${NC}\n"
+    printf "${GREEN}Mattermost Web GUI : ${NC}http://192.168.10.2:80\n"
+    printf "${GREEN}Internal Database  : ${NC}172.28.0.10:5432 (Isolated Docker Bridge)\n"
+    printf "${GREEN}Container Health   : ${NC}\n"
     docker compose ps
-    printf "\n${YELLOW}Next Step:${NC} Navigate to http://192.168.10.2:80 to initialize the admin\n"
-    printf "account and create your incoming webhook for the FortiOS Automation Stitch.\n"
+    printf "\n${YELLOW}Next Step:${NC} Navigate to http://192.168.10.2:80 to create your admin account\n"
+    printf "and generate your Incoming Webhook URL for the FortiOS Automation Stitch.\n"
 else
-    log_warn "Stack initialization is taking longer than expected. Check logs with:"
+    log_warn "Stack is running, but containers are still initializing. Check logs with:"
     printf "  docker compose -f %s/docker-compose.yml logs -f\n" "$COMPOSE_DIR"
 fi
