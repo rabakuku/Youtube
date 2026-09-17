@@ -269,13 +269,13 @@ end
 2. Clean Multi-Line Markdown Card
 
 ```fortios
-{"text": "### :rotating_light: FortiGate Threat Detection\n* **Log ID:** `%%log.logid%%`\n* **Message:** %%log.msg%%\n* **Source IP:** `%%log.srcip%%` (Port: `%%log.srcport%%`)\n* **Destination IP:** `%%log.dstip%%` (Port: `%%log.dstport%%`)\n* **Action:** `%%log.action%%`\n* **Firewall Policy:** `%%log.policyid%%`"}
+{"text": "### :rotating_light: FortiGate Admin Login Failure\n* **Log ID:** `%%log.logid%%`\n* **Target Admin:** `%%log.user%%`\n* **Interface / Service:** `%%log.ui%%`\n* **Source IP:** `%%log.srcip%%`\n* **Destination IP:** `%%log.dstip%%`\n* **Status / Reason:** `%%log.action%%` (%%log.reason%%)\n* **Message:** %%log.msg%%"}
 ```
 
 3. Raw Log Dump (Useful for Debugging)
 
 ```fortios
-{"text": ":warning: **Trigger Log Dump:**\n```json\n%%log%%\n```"}
+{"text": "### :warning: FortiGate Log Dump\n```\nDate/Time : %%log.date%% %%log.time%%\nDevice    : %%log.devname%% (%%log.devid%%)\nLog ID    : %%log.logid%% (%%log.logdesc%%)\nUser      : %%log.user%%\nUI/Method : %%log.ui%%\nSource IP : %%log.srcip%%\nDest IP   : %%log.dstip%%\nStatus    : %%log.action%% / %%log.status%% (%%log.reason%%)\nMessage   : %%log.msg%%\n```"}
 ```
 
 
