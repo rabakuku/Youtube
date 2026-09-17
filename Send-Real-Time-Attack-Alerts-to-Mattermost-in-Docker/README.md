@@ -118,8 +118,8 @@ You do not need to clone the entire Git repository. Simply fetch the `setup.sh` 
 2. Create a dedicated workspace and retrieve the automation scripts:
 ```bash
 mkdir -p /opt/mattermost-stack && cd /opt/mattermost-stack
-curl -fsSL [https://raw.githubusercontent.com/rabakuku/Youtube/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/scripts/setup.sh](https://raw.githubusercontent.com/rabakuku/Youtube/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/scripts/setup.sh) -o setup.sh
-curl -fsSL [https://raw.githubusercontent.com/rabakuku/Youtube/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/scripts/rollback.sh](https://raw.githubusercontent.com/rabakuku/Youtube/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/scripts/rollback.sh) -o rollback.sh
+curl -fsSL https://raw.githubusercontent.com/rabakuku/Youtube/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/scripts/setup.sh -o setup.sh
+curl -fsSL https://raw.githubusercontent.com/rabakuku/Youtube/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/scripts/rollback.sh -o rollback.sh
 chmod +x setup.sh rollback.sh
 
 ```
