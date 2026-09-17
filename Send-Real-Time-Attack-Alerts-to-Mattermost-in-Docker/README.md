@@ -324,7 +324,7 @@ Executes Option 1 and Option 2, purges all installed network and storage depende
 * **Master Architecture Specification:**
 👉 **[Docs/main.md](https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/Docs/main.md)**
 * **Full-Screen Interactive HTML Presentation Deck:**
-👉 **[presentation/PowerPoint_Example.html](https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/presentation/PowerPoint_Example.html)**
+👉 **[presentation/PowerPoint_Example.html](https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/presentation/PowerPoint.html)**
 Open in any modern browser for an edge-to-edge interactive presentation with animated SVG network traffic flows, keyboard controls (`Spacebar`, `Arrow Keys`), and zero-trust metric dashboards.
 
 
