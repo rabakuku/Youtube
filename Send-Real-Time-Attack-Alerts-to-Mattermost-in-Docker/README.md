@@ -185,44 +185,16 @@ security-alerts
 Configure FortiGate (`192.168.10.1`) to inspect traffic and trigger automated HTTP POST requests directly across the LAN to your Mattermost listener whenever an IPS attack or threat is detected.
 
 1. Follow the full CLI and GUI walkthrough in:
-👉 **[Docs/Fortinet.md](https://www.google.com/search?q=https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/Docs/Fortinet.md)**
+👉 **[Docs/Fortinet.md](https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/Docs/Fortinet.md)**
 2. Apply the address objects and internal policy on FortiGate:
-```fortios
-config firewall address
-    edit "HOST_Alpine_Mattermost"
-        set subnet 192.168.10.2 255.255.255.255
-        set comment "Mattermost container host"
-    next
-    edit "NET_LAN_192.168.10.0"
-        set subnet 192.168.10.0 255.255.255.0
-        set comment "Internal trust LAN"
-    next
-end
-
-config firewall policy
-    edit 10
-        set name "LAN_Client_to_Mattermost"
-        set srcintf "port2"
-        set dstintf "port2"
-        set action accept
-        set srcaddr "NET_LAN_192.168.10.0"
-        set dstaddr "HOST_Alpine_Mattermost"
-        set schedule "always"
-        set service "HTTP"
-        set logtraffic all
-    next
-end
-
-```
-
+ **[Docs/Fortinet.md](https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/Docs/Fortinet.md)**
 
 3. Configure the FortiOS Automation Stitch (substituting your actual Webhook URI):
 ```fortios
 config system automation-trigger
-    edit "Trigger_IPS_Attack_Alert"
+    edit "Trigger_Attack_Alert"
         set event-type event-log
-        set logid 0419016384
-        set description "Firewall IPS Threat Event"
+        set logid 32002
     next
 end
 
@@ -230,9 +202,9 @@ config system automation-action
     edit "Action_Mattermost_Webhook"
         set action-type webhook
         set protocol http
-        set uri "hooks/YOUR_HOOK_ID_HERE"
+        set uri "192.168.10.2/hooks/dbppnozrwjgc3quo8wem68gmyr"
         set port 80
-        set http-body "{\"text\": \"warning\"}"
+        set http-body "{"text": "warning"}"
         config http-headers
             edit 1
                 set key "Content-Type"
@@ -245,15 +217,11 @@ end
 config system automation-stitch
     edit "Stitch_FortiGate_to_Mattermost"
         set status enable
-        set trigger "Trigger_IPS_Attack_Alert"
+        set trigger "Trigger_Attack_Alert"
         config actions
             edit 1
                 set action "Action_Mattermost_Webhook"
                 set required enable
-            next
-        end
-        config destination
-            edit "HOST_Alpine_Mattermost"
             next
         end
     next
@@ -287,7 +255,7 @@ Confirm end-to-end communication from the FortiGate CLI before testing live atta
 
 1. **Test Automation Action Dispatch:**
 ```fortios
-diagnose automation test Stitch_FortiGate_to_Mattermost
+Log in with a bad password to trigger the alert
 
 ```
 
