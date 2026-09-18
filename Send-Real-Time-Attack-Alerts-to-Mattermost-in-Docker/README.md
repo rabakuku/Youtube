@@ -71,7 +71,7 @@ Perimeter defense architectures frequently suffer from silent security failures.
 This project delivers a completely automated, zero-trust pipeline:
 
 1. Hardens an ultra-minimal Alpine Linux host (`192.168.10.2`) with an enforced OS gatekeeper check.
-2. Automates the deployment of PostgreSQL 15 and Mattermost Team Edition via [scripts/setup.sh](https://www.google.com/search?q=https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/scripts/setup.sh) by pulling required configurations without cloning the entire repository.
+2. Automates the deployment of PostgreSQL 15 and Mattermost Team Edition via [scripts/setup.sh](https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/scripts/setup.sh) by pulling required configurations without cloning the entire repository.
 3. Connects FortiOS Automation Stitches directly to Mattermost incoming webhooks over the local LAN without public NAT or third-party cloud aggregators.
 
 ---
@@ -139,7 +139,7 @@ chmod +x setup.sh rollback.sh
 * Enables the Alpine Community repository in `/etc/apk/repositories`.
 * Installs `docker`, `docker-cli-compose`, `containerd`, `iptables`, `curl`, `net-tools`, and `ca-certificates`.
 * Registers the Docker service with the `boot` runlevel and starts the daemon via OpenRC.
-* Automatically fetches [compose/docker-compose.yml](https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/compose/docker-compose.yml) and generates [compose/.env](https://www.google.com/search?q=https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/compose/.env.example).
+* Automatically fetches [compose/docker-compose.yml](https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/compose/docker-compose.yml) and generates [compose/.env](https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/compose/.env.example).
 * Binds the Mattermost listener directly to host port `80`.
 * Executes an active healthcheck loop until PostgreSQL and Mattermost return healthy status.
 
@@ -337,9 +337,9 @@ Executes Option 1 and Option 2, purges all installed network and storage depende
 ## Educational & Media Production Assets
 
 * **Master Architecture Specification:**
-👉 **[Docs/main.md](https://www.google.com/search?q=https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/Docs/main.md)**
+👉 **[Docs/main.md](https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/Docs/main.md)**
 * **Full-Screen Interactive HTML Presentation Deck:**
-👉 **[presentation/PowerPoint.html](https://www.google.com/search?q=https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/presentation/PowerPoint.html)**
+👉 **[presentation/PowerPoint.html](https://github.com/rabakuku/Youtube/blob/main/Send-Real-Time-Attack-Alerts-to-Mattermost-in-Docker/presentation/PowerPoint.html)**
 Open in any modern browser for an edge-to-edge interactive presentation with animated SVG network traffic flows, keyboard controls (`Spacebar`, `Arrow Keys`), and zero-trust metric dashboards.
 
 ```
