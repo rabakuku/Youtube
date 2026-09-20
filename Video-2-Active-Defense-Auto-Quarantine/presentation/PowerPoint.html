@@ -1,0 +1,710 @@
+<!-- filepath: presentation/PowerPoint.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Active-Defense-Auto-Quarantine | Autonomous Edge SOAR</title>
+  <style>
+    :root {
+      --bg-dark: #070a13;
+      --bg-card: rgba(15, 23, 42, 0.85);
+      --border-color: rgba(56, 189, 248, 0.2);
+      --forti-red: #ee2737;
+      --docker-blue: #0ea5e9;
+      --matrix-green: #10b981;
+      --accent-cyan: #38bdf8;
+      --accent-yellow: #f59e0b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* Fixed Top HUD */
+    .header-hud {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      background: rgba(7, 10, 19, 0.75);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      z-index: 100;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .badge-forti {
+      background: rgba(238, 39, 55, 0.15);
+      border: 1px solid var(--forti-red);
+      color: var(--forti-red);
+      font-weight: 700;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      padding: 0.35rem 0.75rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .hud-title {
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--text-main);
+    }
+
+    .slide-counter {
+      font-family: "Courier New", Courier, monospace;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      letter-spacing: 0.1em;
+    }
+
+    /* Main Viewport Container */
+    .deck-viewport {
+      position: fixed;
+      top: 64px;
+      bottom: 64px;
+      left: 0;
+      right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem 2.5rem;
+    }
+
+    .slide {
+      position: absolute;
+      width: calc(100% - 5rem);
+      max-width: 1400px;
+      height: calc(100% - 3rem);
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateX(100px);
+      transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+
+    /* Slide Header */
+    .slide-titles {
+      margin-bottom: 1.25rem;
+    }
+
+    .slide-eyebrow {
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent-cyan);
+      margin-bottom: 0.25rem;
+    }
+
+    .slide-heading {
+      font-size: 2.1rem;
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--text-main);
+    }
+
+    .slide-subheading {
+      font-size: 1rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    /* Split-Screen Canvas Layout */
+    .slide-body {
+      display: grid;
+      grid-template-columns: 0.95fr 1.45fr;
+      gap: 2.5rem;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* Left Info Column */
+    .info-column {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .info-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 1.25rem 1.4rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .info-card.cyan-border { border-left: 4px solid var(--accent-cyan); }
+    .info-card.red-border { border-left: 4px solid var(--forti-red); }
+    .info-card.yellow-border { border-left: 4px solid var(--accent-yellow); }
+    .info-card.green-border { border-left: 4px solid var(--matrix-green); }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card-desc {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    .code-pill {
+      font-family: monospace;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      color: var(--accent-cyan);
+      font-size: 0.8rem;
+    }
+
+    /* Right Canvas Engine */
+    .stage-canvas {
+      background: #050811;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: inset 0 0 35px rgba(0, 0, 0, 0.8), 0 0 25px rgba(14, 165, 233, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .graphic-engine {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Vector Animations */
+    @keyframes pulse-flow {
+      0% { stroke-dashoffset: 100; }
+      100% { stroke-dashoffset: 0; }
+    }
+
+    @keyframes radar-glow {
+      0%, 100% { opacity: 0.3; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.08); }
+    }
+
+    @keyframes packet-dash {
+      to { stroke-dashoffset: -40; }
+    }
+
+    .anim-pulse {
+      animation: radar-glow 3s infinite ease-in-out;
+      transform-origin: center;
+    }
+
+    .anim-flow {
+      stroke-dasharray: 8, 8;
+      animation: packet-dash 1.5s linear infinite;
+    }
+
+    .anim-flow-fast {
+      stroke-dasharray: 6, 6;
+      animation: packet-dash 0.8s linear infinite;
+    }
+
+    /* Fixed Bottom HUD */
+    .footer-hud {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      background: rgba(7, 10, 19, 0.75);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border-color);
+      z-index: 100;
+    }
+
+    .nav-hints {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .key-badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      color: var(--text-main);
+      font-family: monospace;
+      font-size: 0.75rem;
+    }
+
+    .dots-container {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .slide-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .slide-dot.active {
+      background: var(--accent-cyan);
+      transform: scale(1.35);
+      box-shadow: 0 0 10px var(--accent-cyan);
+    }
+
+    .nav-buttons {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .btn-nav {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 0.45rem 1.1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-nav:hover:not(:disabled) {
+      background: var(--accent-cyan);
+      color: #000;
+      border-color: var(--accent-cyan);
+    }
+
+    .btn-nav:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header HUD -->
+  <header class="header-hud">
+    <div class="brand-group">
+      <div class="badge-forti">FortiOS 7.4</div>
+      <div class="hud-title">Active-Defense-Auto-Quarantine</div>
+    </div>
+    <div class="slide-counter" id="slideCounter">SLIDE 01 / 04</div>
+  </header>
+
+  <!-- Presentation Viewport -->
+  <main class="deck-viewport">
+
+    <!-- SLIDE 1: The Core Dilemma -->
+    <section class="slide active" data-index="0">
+      <div class="slide-titles">
+        <div class="slide-eyebrow">The Edge Problem</div>
+        <h1 class="slide-heading">The Perimeter Lag Crisis</h1>
+        <p class="slide-subheading">High-velocity adversary reconnaissance overwhelms human triage windows.</p>
+      </div>
+      <div class="slide-body">
+        <div class="info-column">
+          <div class="info-card red-border">
+            <div class="card-title">High-Rate TCP SYN Floods</div>
+            <div class="card-desc">Adversaries execute multi-port reconnaissance sweeps targeting exposed firewall VIPs and gateway interfaces, consuming state table resources in seconds.</div>
+          </div>
+          <div class="info-card yellow-border">
+            <div class="card-title">Siloed Asynchronous Logs</div>
+            <div class="card-desc">Detection events sit idle in local Syslog or remote SIEM buffers. By the time a SOC engineer is alerted, the attack window has concluded.</div>
+          </div>
+          <div class="info-card cyan-border">
+            <div class="card-title">The Remediation Gap</div>
+            <div class="card-desc">Passive defense requires 15–45 minutes of manual triage. The objective is autonomous edge response executed in under <span class="code-pill">150ms</span>.</div>
+          </div>
+        </div>
+        <div class="stage-canvas">
+          <svg class="graphic-engine" viewBox="0 0 800 500" fill="none">
+            <!-- Grid Background -->
+            <defs>
+              <pattern id="grid1" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1" />
+              </pattern>
+            </defs>
+            <rect width="800" height="500" fill="url(#grid1)" />
+
+            <!-- Attacker Node -->
+            <rect x="70" y="200" width="160" height="100" rx="8" fill="#0f172a" stroke="#ee2737" stroke-width="2" />
+            <text x="150" y="235" fill="#ee2737" font-weight="bold" font-size="14" text-anchor="middle">KALI ATTACKER</text>
+            <text x="150" y="258" fill="#94a3b8" font-size="12" text-anchor="middle">192.168.10.3</text>
+            <text x="150" y="280" fill="#f59e0b" font-family="monospace" font-size="11" text-anchor="middle">TCP SYN Sweep</text>
+
+            <!-- Attack Stream Flow -->
+            <line x1="230" y1="250" x2="390" y2="250" stroke="#ee2737" stroke-width="3" class="anim-flow-fast" />
+            <polygon points="390,245 400,250 390,255" fill="#ee2737" />
+
+            <!-- FortiGate Perimeter -->
+            <rect x="400" y="160" width="180" height="180" rx="10" fill="#0f172a" stroke="#ee2737" stroke-width="2" />
+            <text x="490" y="200" fill="#ee2737" font-weight="bold" font-size="16" text-anchor="middle">FORTIGATE VM</text>
+            <text x="490" y="222" fill="#94a3b8" font-size="12" text-anchor="middle">FGT-CORE-01</text>
+            <circle cx="490" cy="265" r="28" fill="rgba(238,39,55,0.15)" stroke="#ee2737" stroke-width="1.5" class="anim-pulse" />
+            <text x="490" y="270" fill="#f8fafc" font-size="11" font-weight="bold" text-anchor="middle">DoS Match</text>
+            <text x="490" y="318" fill="#38bdf8" font-family="monospace" font-size="10" text-anchor="middle">Log: 0100022001</text>
+
+            <!-- Stalled SIEM/Log Buffer -->
+            <line x1="580" y1="250" x2="650" y2="250" stroke="#94a3b8" stroke-dasharray="4,4" stroke-width="2" />
+            <rect x="650" y="200" width="110" height="100" rx="8" fill="#0f172a" stroke="#94a3b8" stroke-width="1.5" />
+            <text x="705" y="235" fill="#94a3b8" font-weight="bold" font-size="12" text-anchor="middle">SIEM / BUFFER</text>
+            <text x="705" y="258" fill="#ee2737" font-size="11" text-anchor="middle">Passive Delay</text>
+            <text x="705" y="278" fill="#f59e0b" font-family="monospace" font-size="10" text-anchor="middle">> 30 mins</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 2: Target Blueprint -->
+    <section class="slide" data-index="1">
+      <div class="slide-titles">
+        <div class="slide-eyebrow">Network Architecture</div>
+        <h1 class="slide-heading">The Trust Boundary Blueprint</h1>
+        <p class="slide-subheading">Strict Layer 2/3 containment topology on 192.168.10.0/24.</p>
+      </div>
+      <div class="slide-body">
+        <div class="info-column">
+          <div class="info-card cyan-border">
+            <div class="card-title">Node 1: FortiGate Core</div>
+            <div class="card-desc"><span class="code-pill">192.168.10.1</span> bound to <span class="code-pill">port2</span>. Enforces perimeter inspection, anomaly logging, and dynamic blackhole drops.</div>
+          </div>
+          <div class="info-card green-border">
+            <div class="card-title">Node 2: Alpine Linux Host</div>
+            <div class="card-desc"><span class="code-pill">192.168.10.2</span> running Docker Engine and n8n orchestration core listening on host port <span class="code-pill">80</span>.</div>
+          </div>
+          <div class="info-card red-border">
+            <div class="card-title">Node 3: Kali Attacker</div>
+            <div class="card-desc"><span class="code-pill">192.168.10.3</span> adversary platform generating rate-based SYN probes and vulnerability sweeps.</div>
+          </div>
+        </div>
+        <div class="stage-canvas">
+          <svg class="graphic-engine" viewBox="0 0 800 500" fill="none">
+            <defs>
+              <pattern id="grid2" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1" />
+              </pattern>
+            </defs>
+            <rect width="800" height="500" fill="url(#grid2)" />
+
+            <!-- Gateway Node (FortiGate) -->
+            <rect x="300" y="50" width="200" height="90" rx="8" fill="#0f172a" stroke="#ee2737" stroke-width="2" />
+            <text x="400" y="85" fill="#ee2737" font-weight="bold" font-size="14" text-anchor="middle">FGT-CORE-01 (port2)</text>
+            <text x="400" y="108" fill="#f8fafc" font-family="monospace" font-size="12" text-anchor="middle">192.168.10.1/24</text>
+            <text x="400" y="126" fill="#38bdf8" font-size="11" text-anchor="middle">Perimeter Gateway & API</text>
+
+            <!-- Backbone Switch Line -->
+            <line x1="120" y1="240" x2="680" y2="240" stroke="#38bdf8" stroke-width="3" />
+            <text x="400" y="230" fill="#38bdf8" font-size="11" font-family="monospace" text-anchor="middle">TRUST BOUNDARY: 192.168.10.0/24</text>
+
+            <!-- Links to Switch -->
+            <line x1="400" y1="140" x2="400" y2="240" stroke="#ee2737" stroke-width="2" />
+            <line x1="180" y1="240" x2="180" y2="330" stroke="#ee2737" stroke-width="2" />
+            <line x1="620" y1="240" x2="620" y2="330" stroke="#0ea5e9" stroke-width="2" />
+
+            <!-- Kali Node -->
+            <rect x="90" y="330" width="180" height="110" rx="8" fill="#0f172a" stroke="#ee2737" stroke-width="2" />
+            <text x="180" y="365" fill="#ee2737" font-weight="bold" font-size="14" text-anchor="middle">KALI ATTACKER</text>
+            <text x="180" y="390" fill="#f8fafc" font-family="monospace" font-size="12" text-anchor="middle">192.168.10.3/24</text>
+            <text x="180" y="415" fill="#94a3b8" font-size="11" text-anchor="middle">Adversary Simulator</text>
+
+            <!-- Alpine Docker Host -->
+            <rect x="520" y="330" width="200" height="110" rx="8" fill="#0f172a" stroke="#0ea5e9" stroke-width="2" />
+            <text x="620" y="360" fill="#0ea5e9" font-weight="bold" font-size="13" text-anchor="middle">ALPINE LINUX 3.24</text>
+            <text x="620" y="380" fill="#f8fafc" font-family="monospace" font-size="12" text-anchor="middle">192.168.10.2:80</text>
+            <rect x="535" y="395" width="170" height="30" rx="4" fill="rgba(14,165,233,0.15)" stroke="#0ea5e9" />
+            <text x="620" y="415" fill="#10b981" font-size="10" font-family="monospace" text-anchor="middle">n8n Engine + Postgres 16</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 3: Mechanics in Motion -->
+    <section class="slide" data-index="2">
+      <div class="slide-titles">
+        <div class="slide-eyebrow">Closed-Loop SOAR</div>
+        <h1 class="slide-heading">Autonomous Feedback Loop</h1>
+        <p class="slide-subheading">Event detection, webhook dispatch, and REST API strike-back in real time.</p>
+      </div>
+      <div class="slide-body">
+        <div class="info-column">
+          <div class="info-card red-border">
+            <div class="card-title">1. Detection & Stitch Trigger</div>
+            <div class="card-desc">FortiOS matches TCP SYN sweeps via <span class="code-pill">DoS-policy</span>. An Automation Stitch catches log ID <span class="code-pill">0100022001</span> immediately.</div>
+          </div>
+          <div class="info-card cyan-border">
+            <div class="card-title">2. Outbound Webhook POST</div>
+            <div class="card-desc">FortiGate dispatches incident JSON to <span class="code-pill">http://192.168.10.2:80/webhook/quarantine</span> containing the attacker IP.</div>
+          </div>
+          <div class="info-card green-border">
+            <div class="card-title">3. REST API Strike-Back</div>
+            <div class="card-desc">n8n validates whitelist rules and calls FortiOS HTTPS port <span class="code-pill">443</span>, injecting the host into the dynamic drop group.</div>
+          </div>
+        </div>
+        <div class="stage-canvas">
+          <svg class="graphic-engine" viewBox="0 0 800 500" fill="none">
+            <defs>
+              <pattern id="grid3" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1" />
+              </pattern>
+            </defs>
+            <rect width="800" height="500" fill="url(#grid3)" />
+
+            <!-- Pipeline Step 1: Attack -->
+            <rect x="50" y="80" width="160" height="80" rx="6" fill="#0f172a" stroke="#ee2737" stroke-width="2" />
+            <text x="130" y="115" fill="#ee2737" font-weight="bold" font-size="13" text-anchor="middle">[1] SYN FLOOD</text>
+            <text x="130" y="135" fill="#94a3b8" font-size="11" text-anchor="middle">From 192.168.10.3</text>
+
+            <line x1="210" y1="120" x2="320" y2="120" stroke="#ee2737" stroke-width="2" class="anim-flow" />
+
+            <!-- Pipeline Step 2: FortiOS Stitch -->
+            <rect x="320" y="60" width="220" height="120" rx="8" fill="#0f172a" stroke="#ee2737" stroke-width="2" />
+            <text x="430" y="95" fill="#ee2737" font-weight="bold" font-size="14" text-anchor="middle">FORTIGATE STITCH</text>
+            <text x="430" y="120" fill="#f8fafc" font-size="11" text-anchor="middle">Anomaly Rule Match</text>
+            <text x="430" y="142" fill="#38bdf8" font-family="monospace" font-size="10" text-anchor="middle">Webhook Dispatch</text>
+
+            <path d="M 430 180 L 430 320" stroke="#38bdf8" stroke-width="2" class="anim-flow" />
+
+            <!-- Pipeline Step 3: n8n Engine -->
+            <rect x="320" y="320" width="220" height="120" rx="8" fill="#0f172a" stroke="#0ea5e9" stroke-width="2" />
+            <text x="430" y="355" fill="#0ea5e9" font-weight="bold" font-size="14" text-anchor="middle">n8n SOAR WORKER</text>
+            <text x="430" y="380" fill="#f8fafc" font-size="11" text-anchor="middle">Payload IP Extraction</text>
+            <text x="430" y="405" fill="#10b981" font-family="monospace" font-size="10" text-anchor="middle">Whitelist CIDR Check</text>
+
+            <!-- Pipeline Step 4: Strike Back -->
+            <path d="M 540 380 L 680 380 L 680 120 L 540 120" stroke="#10b981" stroke-width="2" class="anim-flow" />
+            <text x="695" y="250" fill="#10b981" font-size="11" font-family="monospace" text-anchor="middle" transform="rotate(90,695,250)">REST API POST /addrgrp</text>
+
+            <!-- Result Drop Banner -->
+            <rect x="50" y="340" width="200" height="70" rx="6" fill="rgba(238,39,55,0.15)" stroke="#ee2737" stroke-width="1.5" />
+            <text x="150" y="370" fill="#ee2737" font-weight="bold" font-size="13" text-anchor="middle">POLICY 100: DROP</text>
+            <text x="150" y="392" fill="#f8fafc" font-size="11" text-anchor="middle">Active Session Flushed</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: Implementation & Production ROI -->
+    <section class="slide" data-index="3">
+      <div class="slide-titles">
+        <div class="slide-eyebrow">Execution & Value</div>
+        <h1 class="slide-heading">Production ROI & Metrics</h1>
+        <p class="slide-subheading">Lightweight on-premises deployment delivering sub-second containment.</p>
+      </div>
+      <div class="slide-body">
+        <div class="info-column">
+          <div class="info-card cyan-border">
+            <div class="card-title">Sub-150ms Response Latency</div>
+            <div class="card-desc">Total time from adversary packet ingestion to FortiOS kernel-level drop policy application averages 120 to 145 milliseconds.</div>
+          </div>
+          <div class="info-card green-border">
+            <div class="card-title">Zero Additional License Cost</div>
+            <div class="card-desc">Leverages native FortiOS 7.4 Automation Stitches and self-hosted Alpine Docker open-source containers. Zero recurring cloud fees.</div>
+          </div>
+          <div class="info-card yellow-border">
+            <div class="card-title">Minimal Host Footprint</div>
+            <div class="card-desc">The entire Alpine Linux 3.24 runtime, Docker daemon, n8n core, and PostgreSQL container stack consumes under 250MB RAM at idle.</div>
+          </div>
+        </div>
+        <div class="stage-canvas">
+          <svg class="graphic-engine" viewBox="0 0 800 500" fill="none">
+            <defs>
+              <pattern id="grid4" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1" />
+              </pattern>
+            </defs>
+            <rect width="800" height="500" fill="url(#grid4)" />
+
+            <!-- KPI Metric 1 -->
+            <rect x="70" y="60" width="190" height="110" rx="8" fill="#0f172a" stroke="#10b981" stroke-width="2" />
+            <text x="165" y="105" fill="#10b981" font-weight="900" font-size="32" text-anchor="middle">&lt; 150ms</text>
+            <text x="165" y="135" fill="#94a3b8" font-size="12" text-anchor="middle">Containment Speed</text>
+
+            <!-- KPI Metric 2 -->
+            <rect x="305" y="60" width="190" height="110" rx="8" fill="#0f172a" stroke="#38bdf8" stroke-width="2" />
+            <text x="400" y="105" fill="#38bdf8" font-weight="900" font-size="32" text-anchor="middle">$0</text>
+            <text x="400" y="135" fill="#94a3b8" font-size="12" text-anchor="middle">SaaS / Cloud Subscriptions</text>
+
+            <!-- KPI Metric 3 -->
+            <rect x="540" y="60" width="190" height="110" rx="8" fill="#0f172a" stroke="#f59e0b" stroke-width="2" />
+            <text x="635" y="105" fill="#f59e0b" font-weight="900" font-size="32" text-anchor="middle">&lt; 250MB</text>
+            <text x="635" y="135" fill="#94a3b8" font-size="12" text-anchor="middle">Alpine Host Footprint</text>
+
+            <!-- Production Pipeline Roadmap -->
+            <rect x="70" y="220" width="660" height="220" rx="10" fill="#0f172a" stroke="rgba(56,189,248,0.3)" />
+            <text x="400" y="255" fill="#f8fafc" font-weight="bold" font-size="14" text-anchor="middle">DEPLOYMENT PIPELINE PHASES</text>
+
+            <!-- Phase Blocks -->
+            <rect x="100" y="280" width="160" height="120" rx="6" fill="#070a13" stroke="#0ea5e9" stroke-width="1.5" />
+            <text x="180" y="315" fill="#0ea5e9" font-weight="bold" font-size="12" text-anchor="middle">STAGE 2 & 3</text>
+            <text x="180" y="340" fill="#f8fafc" font-size="11" text-anchor="middle">Alpine Host &</text>
+            <text x="180" y="360" fill="#f8fafc" font-size="11" text-anchor="middle">Docker Runtime</text>
+
+            <rect x="320" y="280" width="160" height="120" rx="6" fill="#070a13" stroke="#f59e0b" stroke-width="1.5" />
+            <text x="400" y="315" fill="#f59e0b" font-weight="bold" font-size="12" text-anchor="middle">STAGE 4 & 5</text>
+            <text x="400" y="340" fill="#f8fafc" font-size="11" text-anchor="middle">Stitch Webhook &</text>
+            <text x="400" y="360" fill="#f8fafc" font-size="11" text-anchor="middle">REST API Token</text>
+
+            <rect x="540" y="280" width="160" height="120" rx="6" fill="#070a13" stroke="#10b981" stroke-width="1.5" />
+            <text x="620" y="315" fill="#10b981" font-weight="bold" font-size="12" text-anchor="middle">STAGE 6</text>
+            <text x="620" y="340" fill="#f8fafc" font-size="11" text-anchor="middle">Automated Setup</text>
+            <text x="620" y="360" fill="#f8fafc" font-size="11" text-anchor="middle">& Teardown Scripts</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Fixed Bottom HUD -->
+  <footer class="footer-hud">
+    <div class="nav-hints">
+      <span><span class="key-badge">←</span> Prev</span>
+      <span><span class="key-badge">→</span> / <span class="key-badge">Space</span> Next</span>
+    </div>
+    <div class="dots-container" id="dotsContainer"></div>
+    <div class="nav-buttons">
+      <button class="btn-nav" id="btnPrev">Previous</button>
+      <button class="btn-nav" id="btnNext">Next</button>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      const slides = document.querySelectorAll('.slide');
+      const dotsContainer = document.getElementById('dotsContainer');
+      const btnPrev = document.getElementById('btnPrev');
+      const btnNext = document.getElementById('btnNext');
+      const slideCounter = document.getElementById('slideCounter');
+      let currentIndex = 0;
+
+      // Initialize Pagination Dots
+      slides.forEach((_, idx) => {
+        const dot = document.createElement('div');
+        dot.classList.add('slide-dot');
+        if (idx === 0) dot.classList.add('active');
+        dot.addEventListener('click', () => goToSlide(idx));
+        dotsContainer.appendChild(dot);
+      });
+
+      const dots = document.querySelectorAll('.slide-dot');
+
+      function updateSlideState() {
+        slides.forEach((slide, idx) => {
+          if (idx === currentIndex) {
+            slide.classList.add('active');
+          } else {
+            slide.classList.remove('active');
+          }
+        });
+
+        dots.forEach((dot, idx) => {
+          if (idx === currentIndex) {
+            dot.classList.add('active');
+          } else {
+            dot.classList.remove('active');
+          }
+        });
+
+        slideCounter.textContent = `SLIDE 0${currentIndex + 1} / 0${slides.length}`;
+        btnPrev.disabled = currentIndex === 0;
+        btnNext.disabled = currentIndex === slides.length - 1;
+      }
+
+      function goToSlide(index) {
+        if (index >= 0 && index < slides.length) {
+          currentIndex = index;
+          updateSlideState();
+        }
+      }
+
+      function nextSlide() {
+        if (currentIndex < slides.length - 1) {
+          currentIndex++;
+          updateSlideState();
+        }
+      }
+
+      function prevSlide() {
+        if (currentIndex > 0) {
+          currentIndex--;
+          updateSlideState();
+        }
+      }
+
+      btnNext.addEventListener('click', nextSlide);
+      btnPrev.addEventListener('click', prevSlide);
+
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'ArrowRight' || e.code === 'Space') {
+          e.preventDefault();
+          nextSlide();
+        } else if (e.code === 'ArrowLeft') {
+          e.preventDefault();
+          prevSlide();
+        }
+      });
+
+      updateSlideState();
+    })();
+  </script>
+</body>
+</html>
