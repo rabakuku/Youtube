@@ -250,6 +250,4 @@ su - soaradmin -c "docker info"
 *Expected Output:*
 The output must display the active Docker server version, storage driver (`overlay2`), and show zero socket connectivity errors.
 
-When both commands pass inspection, respond with:
 
-`"I am done with Stage 2"`
