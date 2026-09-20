@@ -220,7 +220,5 @@ The updated `README.md` has been enriched with:
 - Visual ASCII topology, role matrix, and step-by-step SOAR feedback loop.
 - One-command quickstart deployment and complete teardown instructions.
 
-When you are ready to construct the interactive HTML5 presentation deck and synchronized teleprompter script for Stage 8, reply with:  
-`"I am done with Stage 7"`
 
 ```
