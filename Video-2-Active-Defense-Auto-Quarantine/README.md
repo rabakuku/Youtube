@@ -125,7 +125,7 @@ chmod +x scripts/setup.sh scripts/rollback.sh
 
 ### Step 3: Apply FortiOS Configuration
 
-Open the SSH CLI on FortiGate (`192.168.10.1`) and paste the configuration block from [docs/Fortinet.md](https://raw.githubusercontent.com/rabakuku/Youtube/refs/heads/main/Video-2-Active-Defense-Auto-Quarantine/docs/Fortinet.md):
+Open the SSH CLI on FortiGate (`192.168.10.1`) and paste the configuration block from [docs/Fortinet.md](https://github.com/rabakuku/Youtube/blob/main/Video-2-Active-Defense-Auto-Quarantine/docs/Fortinet.md):
 
 ```fortios
 config system accprofile
@@ -144,7 +144,7 @@ end
 
 1. Navigate to `http://192.168.10.2:80/` in your browser.
 2. Complete user registration and create an empty workflow.
-3. Import the JSON definition from [docs/Configuration.md](https://raw.githubusercontent.com/rabakuku/Youtube/refs/heads/main/Video-2-Active-Defense-Auto-Quarantine/docs/Configuration.md).
+3. Import the JSON definition from [docs/Configuration.md](https://github.com/rabakuku/Youtube/blob/main/Video-2-Active-Defense-Auto-Quarantine/docs/Configuration.md).
 4. Toggle the workflow to **Active**.
 
 ---
@@ -206,7 +206,7 @@ docker compose down -v --remove-orphans
 
 ## 📄 License & Attribution
 
-Distributed under the **MIT License**. Maintained by the **Fortinet YouTube Architect** channel. Contributions and pull requests are welcomed via the [official GitHub repository](https://github.com/rabakuku/Youtube/tree/main/Video-2-Active-Defense-Auto-Quarantine?utm_source=gemini).
+Distributed under the **MIT License**. Maintained by the **Fortinet YouTube Architect** channel. Contributions and pull requests are welcomed via the [official GitHub repository](https://github.com/rabakuku/Youtube/tree/main/Video-2-Active-Defense-Auto-Quarantine).
 
 ```
 
