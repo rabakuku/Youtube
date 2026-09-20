@@ -342,7 +342,3 @@ docker compose -f ~/soar-stack/compose/docker-compose.yml logs --tail=25 n8n | g
 ```
 
 *Verification standard:* Logs must confirm receipt of the POST event on `/webhook/quarantine` without HTTP 404 or 500 error traces.
-
-When the webhook returns HTTP 200 and the transaction appears in the container logs, reply with:
-
-`"I am done with Stage 4"`
