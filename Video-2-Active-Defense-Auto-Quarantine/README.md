@@ -253,8 +253,7 @@ end
 
 config system automation-trigger
     edit "TRIG_DOS_ANOMALY"
-        set event-type event-log
-        set logid 0100022001
+        set event-type anomaly-logs
     next
 end
 
