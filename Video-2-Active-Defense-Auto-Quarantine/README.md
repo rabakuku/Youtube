@@ -180,7 +180,6 @@ end
 config firewall policy
     edit 1
         set name "POLICY_ACTIVE_QUARANTINE_DROP"
-        set uuid 3772a1c0-b55f-51f1-691a-fb69eb1dd0c7
         set srcintf "port2"
         set dstintf "any"
         set srcaddr "GRP_ACTIVE_QUARANTINE"
@@ -192,7 +191,6 @@ config firewall policy
     next
     edit 2
         set name "SERVERS TO WAN"
-        set uuid a812ec8c-b230-51f1-da06-685768a887d2
         set srcintf "SERVERS"
         set dstintf "WAN"
         set action accept
@@ -205,7 +203,6 @@ config firewall policy
     next
     edit 3
         set name "USERS TO SERVERS"
-        set uuid f6cf9bce-b55d-51f1-eb89-c7ae7baa95c5
         set srcintf "USERS"
         set dstintf "SERVERS"
         set action accept
@@ -220,7 +217,7 @@ end
 config firewall DoS-policy
     edit 1
         set name "DOS_DETECT_SYN_SWEEP"
-        set interface "port2"
+        set interface "VLAN_QC_40"
         set srcaddr "all"
         set dstaddr "all"
         set service "ALL"
