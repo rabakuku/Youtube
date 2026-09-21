@@ -136,6 +136,17 @@ config firewall vip
     next
 end
 
+config firewall vip
+    edit "HTTP-TO-N8N"
+        set extip 172.24.66.58
+        set mappedip "192.168.10.2"
+        set extintf "any"
+        set portforward enable
+        set extport 8080
+        set mappedport 80
+    next
+end
+
 ssh root@172.24.66.58 -p 2222
 
 
@@ -276,7 +287,7 @@ config firewall policy
         set dstintf "SERVERS"
         set action accept
         set srcaddr "all"
-        set dstaddr "SSH-TO-N8N"
+        set dstaddr "SSH-TO-N8N, HTTP-TO-N8N"
         set schedule "always"
         set service "ALL"
         set logtraffic all
