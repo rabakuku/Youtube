@@ -461,6 +461,10 @@ end
 5. Click **Save** and toggle the switch in the top right to **Active**.
 
 ---
+```bash
+curl -k -i -X GET "https://192.168.10.1:443/api/v2/cmdb/firewall/address" \
+>   -H "Authorization: Bearer autoquarantine-sec-token-xyz123"
+```
 
 ## 🧪 Zero-Touch Emulation & Verification
 
