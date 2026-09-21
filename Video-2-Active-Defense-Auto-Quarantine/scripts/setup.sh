@@ -1,4 +1,3 @@
-# filepath: scripts/setup.sh
 #!/bin/bash
 set -euo pipefail
 
@@ -42,20 +41,71 @@ if [[ $EUID -eq 0 ]]; then
     log_warn "Running directly as root. Non-root user with docker group access is recommended."
 fi
 
-command -v docker >/dev/null 2>&1 || log_fatal "Docker Engine is not installed. Run docs/install-docker.md first."
+###############################################################################
+# Docker Check / Install
+###############################################################################
+
+log_info "Checking Docker installation..."
+
+if ! command -v docker >/dev/null 2>&1; then
+    log_warn "Docker not found. Installing Docker and Docker Compose..."
+
+    if command -v apk >/dev/null 2>&1; then
+        apk update
+        apk add docker docker-cli-compose curl bash
+    else
+        log_fatal "Unsupported operating system. Only Alpine Linux automatic installation is supported."
+    fi
+
+    rc-update add docker default >/dev/null 2>&1 || true
+    service docker start
+
+    sleep 5
+
+    command -v docker >/dev/null 2>&1 || \
+        log_fatal "Docker installation failed."
+fi
+
+log_success "Docker binary detected."
+
+if ! pgrep -x dockerd >/dev/null 2>&1; then
+    log_warn "Docker daemon not running. Starting Docker..."
+    service docker start
+    sleep 5
+fi
 
 if ! docker info >/dev/null 2>&1; then
-    log_fatal "Docker daemon is unresponsive or the current user lacks socket permissions."
+    log_fatal "Docker daemon is unresponsive."
 fi
 
+log_success "Docker daemon is running."
+
 if ! docker compose version >/dev/null 2>&1; then
-    log_fatal "Docker Compose CLI plugin (v2) is not detected."
+    log_warn "Docker Compose plugin missing. Installing..."
+
+    apk add docker-cli-compose
+
+    if ! docker compose version >/dev/null 2>&1; then
+        log_fatal "Docker Compose installation failed."
+    fi
 fi
+
+log_success "Docker Compose plugin detected."
+
+###############################################################################
+# Compose Files
+###############################################################################
 
 log_info "Checking filesystem hierarchy and compose files..."
 
 [[ -d "${COMPOSE_DIR}" ]] || log_fatal "Compose directory not found at: ${COMPOSE_DIR}"
-[[ -f "${COMPOSE_DIR}/docker-compose.yml" ]] || log_fatal "docker-compose.yml not found in ${COMPOSE_DIR}"
+
+[[ -f "${COMPOSE_DIR}/docker-compose.yml" ]] || \
+    log_fatal "docker-compose.yml not found in ${COMPOSE_DIR}"
+
+###############################################################################
+# Environment File
+###############################################################################
 
 if [[ ! -f "${ENV_FILE}" ]]; then
     if [[ -f "${ENV_EXAMPLE}" ]]; then
@@ -67,37 +117,66 @@ if [[ ! -f "${ENV_FILE}" ]]; then
     fi
 fi
 
+###############################################################################
+# Encryption Key
+###############################################################################
+
 log_info "Evaluating cryptographic encryption seed..."
+
 CURRENT_KEY=$(grep -E '^N8N_ENCRYPTION_KEY=' "${ENV_FILE}" | cut -d '=' -f2- || true)
 
 if [[ -z "${CURRENT_KEY}" || "${CURRENT_KEY}" == "replace_with_a_secure_32_character_hex_encryption_key_here" ]]; then
     log_info "Generating a fresh 32-character hexadecimal encryption key..."
+
     NEW_KEY=$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')
-    sed -i "s|^N8N_ENCRYPTION_KEY=.*|N8N_ENCRYPTION_KEY=${NEW_KEY}|" "${ENV_FILE}"
+
+    sed -i \
+        "s|^N8N_ENCRYPTION_KEY=.*|N8N_ENCRYPTION_KEY=${NEW_KEY}|" \
+        "${ENV_FILE}"
+
     log_success "Cryptographic key generated and saved to ${ENV_FILE}"
 fi
 
+###############################################################################
+# Deployment
+###############################################################################
+
 log_info "Pulling container images and instantiating stack..."
+
 cd "${COMPOSE_DIR}"
+
 docker compose pull
 docker compose up -d --remove-orphans
 
+###############################################################################
+# Health Check
+###############################################################################
+
 log_info "Awaiting service health convergence..."
+
 MAX_RETRIES=30
 RETRY_COUNT=0
 HEALTHY=false
 
 while [[ ${RETRY_COUNT} -lt ${MAX_RETRIES} ]]; do
-    if docker compose ps postgres | grep -q "(healthy)"; then
+
+    if docker compose ps postgres 2>/dev/null | grep -q "(healthy)"; then
         HEALTHY=true
         break
     fi
+
     RETRY_COUNT=$((RETRY_COUNT + 1))
     sleep 2
+
 done
 
 if [[ "${HEALTHY}" != "true" ]]; then
     log_fatal "PostgreSQL service failed to reach healthy status within 60 seconds."
 fi
 
-log_success "Active-Defense-Auto-Quarantine SOAR stack is live on http://192.168.10.2:80/"
+###############################################################################
+# Success
+###############################################################################
+
+log_success "Active-Defense-Auto-Quarantine SOAR stack is live."
+log_success "Access URL: http://192.168.10.2:80/"
