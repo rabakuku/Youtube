@@ -1,11 +1,10 @@
 #!/bin/sh
 set -eu
 
-# ==============================================================================
-# Pipeline Setup & Deployment Script: Active-Defense-Auto-Quarantine
-# Target Node: Alpine Linux 3.24 Host (192.168.10.2)
-# Purpose: Initialize directories, enforce secrets, and launch the SOAR runtime
-# ==============================================================================
+###############################################################################
+# Active-Defense-Auto-Quarantine Setup Script
+# Alpine Linux 3.24 Compatible (/bin/sh)
+###############################################################################
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -30,48 +29,75 @@ log_fatal() {
     exit 1
 }
 
-SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-BASE_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
+###############################################################################
+# Directory Structure
+###############################################################################
 
+BASE_DIR="/opt/Active-Defense-Auto-Quarantine"
 COMPOSE_DIR="${BASE_DIR}/compose"
 ENV_FILE="${COMPOSE_DIR}/.env"
 ENV_EXAMPLE="${COMPOSE_DIR}/.env.example"
+COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
 
-log_info "Verifying deployment environment and user permissions..."
+log_info "Using installation directory: ${BASE_DIR}"
 
-if [ "$(id -u)" -eq 0 ]; then
-    log_warn "Running directly as root."
+if [ ! -d "${BASE_DIR}" ]; then
+    log_warn "Creating ${BASE_DIR}"
+    mkdir -p "${BASE_DIR}"
+fi
+
+if [ ! -d "${COMPOSE_DIR}" ]; then
+    log_warn "Creating ${COMPOSE_DIR}"
+    mkdir -p "${COMPOSE_DIR}"
 fi
 
 ###############################################################################
-# Docker Check / Install
+# Root Check
+###############################################################################
+
+if [ "$(id -u)" -ne 0 ]; then
+    log_fatal "This installer must be run as root."
+fi
+
+###############################################################################
+# Docker Installation
 ###############################################################################
 
 log_info "Checking Docker installation..."
 
 if ! command -v docker >/dev/null 2>&1; then
+
     log_warn "Docker not found. Installing..."
 
-    if command -v apk >/dev/null 2>&1; then
-        apk update
-        apk add docker docker-cli-compose curl
-    else
-        log_fatal "Unsupported operating system."
-    fi
+    apk update
+
+    apk add \
+        docker \
+        docker-cli \
+        docker-cli-compose \
+        curl \
+        git
 
     rc-update add docker default >/dev/null 2>&1 || true
-    service docker start || rc-service docker start
+
+    service docker start >/dev/null 2>&1 || \
+    rc-service docker start >/dev/null 2>&1 || true
 
     sleep 5
+fi
 
-    if ! command -v docker >/dev/null 2>&1; then
-        log_fatal "Docker installation failed."
-    fi
+if ! command -v docker >/dev/null 2>&1; then
+    log_fatal "Docker installation failed."
 fi
 
 log_success "Docker binary detected."
 
+###############################################################################
+# Docker Service
+###############################################################################
+
 if ! pgrep dockerd >/dev/null 2>&1; then
+
     log_warn "Docker daemon not running. Starting..."
 
     service docker start >/dev/null 2>&1 || \
@@ -81,12 +107,17 @@ if ! pgrep dockerd >/dev/null 2>&1; then
 fi
 
 if ! docker info >/dev/null 2>&1; then
-    log_fatal "Docker daemon is unresponsive."
+    log_fatal "Docker daemon is not responding."
 fi
 
 log_success "Docker daemon is running."
 
+###############################################################################
+# Docker Compose
+###############################################################################
+
 if ! docker compose version >/dev/null 2>&1; then
+
     log_warn "Docker Compose plugin missing. Installing..."
 
     apk add docker-cli-compose
@@ -99,17 +130,35 @@ fi
 log_success "Docker Compose plugin detected."
 
 ###############################################################################
-# Compose Files
+# Download Compose Assets
 ###############################################################################
 
-log_info "Checking filesystem hierarchy and compose files..."
+if [ ! -f "${COMPOSE_FILE}" ]; then
 
-if [ ! -d "${COMPOSE_DIR}" ]; then
-    log_fatal "Compose directory not found at: ${COMPOSE_DIR}"
+    log_info "Downloading docker-compose.yml..."
+
+    curl -fsSL \
+    "https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-2-Active-Defense-Auto-Quarantine/compose/docker-compose.yml" \
+    -o "${COMPOSE_FILE}"
+
+    [ -f "${COMPOSE_FILE}" ] || \
+        log_fatal "Failed to download docker-compose.yml"
+
+    log_success "docker-compose.yml downloaded."
 fi
 
-if [ ! -f "${COMPOSE_DIR}/docker-compose.yml" ]; then
-    log_fatal "docker-compose.yml not found in ${COMPOSE_DIR}"
+if [ ! -f "${ENV_EXAMPLE}" ]; then
+
+    log_info "Downloading .env.example..."
+
+    curl -fsSL \
+    "https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-2-Active-Defense-Auto-Quarantine/compose/.env.example" \
+    -o "${ENV_EXAMPLE}"
+
+    [ -f "${ENV_EXAMPLE}" ] || \
+        log_fatal "Failed to download .env.example"
+
+    log_success ".env.example downloaded."
 fi
 
 ###############################################################################
@@ -118,44 +167,37 @@ fi
 
 if [ ! -f "${ENV_FILE}" ]; then
 
-    if [ -f "${ENV_EXAMPLE}" ]; then
+    log_info "Creating .env file..."
 
-        log_info "Creating .env from .env.example..."
+    cp "${ENV_EXAMPLE}" "${ENV_FILE}"
 
-        cp "${ENV_EXAMPLE}" "${ENV_FILE}"
-        chmod 600 "${ENV_FILE}"
+    chmod 600 "${ENV_FILE}"
 
-    else
-
-        log_fatal "Missing both .env and .env.example"
-
-    fi
+    log_success ".env created."
 fi
 
 ###############################################################################
 # Encryption Key
 ###############################################################################
 
-log_info "Evaluating encryption seed..."
-
 CURRENT_KEY="$(grep '^N8N_ENCRYPTION_KEY=' "${ENV_FILE}" 2>/dev/null | cut -d '=' -f2- || true)"
 
 if [ -z "${CURRENT_KEY}" ] || \
    [ "${CURRENT_KEY}" = "replace_with_a_secure_32_character_hex_encryption_key_here" ]; then
 
-    log_info "Generating encryption key..."
+    log_info "Generating N8N encryption key..."
 
     NEW_KEY="$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')"
 
     sed -i \
-    "s|^N8N_ENCRYPTION_KEY=.*|N8N_ENCRYPTION_KEY=${NEW_KEY}|" \
-    "${ENV_FILE}"
+        "s|^N8N_ENCRYPTION_KEY=.*|N8N_ENCRYPTION_KEY=${NEW_KEY}|" \
+        "${ENV_FILE}"
 
     log_success "Encryption key updated."
 fi
 
 ###############################################################################
-# Deployment
+# Deploy
 ###############################################################################
 
 log_info "Deploying containers..."
@@ -163,15 +205,16 @@ log_info "Deploying containers..."
 cd "${COMPOSE_DIR}"
 
 docker compose pull
+
 docker compose up -d --remove-orphans
 
 ###############################################################################
 # Health Check
 ###############################################################################
 
-log_info "Waiting for PostgreSQL health check..."
+log_info "Waiting for PostgreSQL to become healthy..."
 
-MAX_RETRIES=30
+MAX_RETRIES=60
 RETRY_COUNT=0
 HEALTHY=false
 
@@ -184,6 +227,7 @@ do
     fi
 
     RETRY_COUNT=$((RETRY_COUNT + 1))
+
     sleep 2
 
 done
@@ -196,5 +240,7 @@ fi
 # Success
 ###############################################################################
 
-log_success "Active-Defense-Auto-Quarantine stack is live."
+log_success "Deployment completed successfully."
+log_success "Installation Directory: ${BASE_DIR}"
+log_success "Compose Directory: ${COMPOSE_DIR}"
 log_success "Access URL: http://192.168.10.2:80/"
