@@ -178,11 +178,11 @@ config firewall addrgrp
 end
 
 config firewall policy
-    edit 100
+    edit 1
         set name "POLICY_ACTIVE_QUARANTINE_DROP"
+        set uuid 3772a1c0-b55f-51f1-691a-fb69eb1dd0c7
         set srcintf "port2"
         set dstintf "any"
-        set action deny
         set srcaddr "GRP_ACTIVE_QUARANTINE"
         set dstaddr "all"
         set schedule "always"
@@ -190,15 +190,29 @@ config firewall policy
         set logtraffic all
         set comments "SOAR automated isolation - drops attacking IPs instantly"
     next
-    edit 101
-        set name "POLICY_ALLOW_SOAR_OUTBOUND"
-        set srcintf "port2"
-        set dstintf "port2"
+    edit 2
+        set name "SERVERS TO WAN"
+        set uuid a812ec8c-b230-51f1-da06-685768a887d2
+        set srcintf "SERVERS"
+        set dstintf "WAN"
         set action accept
         set srcaddr "all"
-        set dstaddr "HOST_ALPINE_SOAR"
+        set dstaddr "all"
         set schedule "always"
-        set service "HTTP" "HTTPS"
+        set service "ALL"
+        set logtraffic all
+        set nat enable
+    next
+    edit 3
+        set name "USERS TO SERVERS"
+        set uuid f6cf9bce-b55d-51f1-eb89-c7ae7baa95c5
+        set srcintf "USERS"
+        set dstintf "SERVERS"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "all"
+        set schedule "always"
+        set service "ALL"
         set logtraffic all
     next
 end
