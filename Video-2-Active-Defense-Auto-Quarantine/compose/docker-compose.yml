@@ -10,6 +10,7 @@ services:
       - N8N_HOST=${N8N_HOST:-192.168.10.2}
       - N8N_PORT=5678
       - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE:-false}
       - WEBHOOK_URL=${WEBHOOK_URL:-http://192.168.10.2/}
       - GENERIC_TIMEZONE=${GENERIC_TIMEZONE:-UTC}
       - NODE_ENV=production
