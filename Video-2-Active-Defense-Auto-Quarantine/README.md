@@ -230,14 +230,14 @@ config firewall DoS-policy
                 set log enable
                 set action pass
                 set quarantine none
-                set threshold 100
+                set threshold 10
             next
             edit "tcp_port_scan"
                 set status enable
                 set log enable
                 set action pass
                 set quarantine none
-                set threshold 30
+                set threshold 5
             next
         end
     next
