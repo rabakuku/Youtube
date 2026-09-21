@@ -1,11 +1,10 @@
 #!/bin/sh
 set -eu
 
-# ==============================================================================
-# Teardown & Rollback Script: Active-Defense-Auto-Quarantine
-# Target Node: Alpine Linux 3.24 Host (192.168.10.2)
-# Purpose: Halt containers, purge state volumes, remove bridge networks
-# ==============================================================================
+###############################################################################
+# Active-Defense-Auto-Quarantine Rollback Script
+# Alpine Linux 3.24 Compatible (/bin/sh)
+###############################################################################
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -25,11 +24,20 @@ log_warn() {
     printf "${YELLOW}[WARN]${NC} %s\n" "$1"
 }
 
-SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-BASE_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
-COMPOSE_DIR="${BASE_DIR}/compose"
+log_fatal() {
+    printf "${RED}[FATAL]${NC} %s\n" "$1"
+    exit 1
+}
 
-log_warn "Initiating teardown of Active-Defense-Auto-Quarantine services..."
+###############################################################################
+# Directory Structure
+###############################################################################
+
+BASE_DIR="/opt/Active-Defense-Auto-Quarantine"
+COMPOSE_DIR="${BASE_DIR}/compose"
+COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
+
+log_warn "Initiating Active-Defense-Auto-Quarantine rollback..."
 
 ###############################################################################
 # Verify Docker
@@ -41,24 +49,26 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 
 ###############################################################################
-# Compose Teardown
+# Stop Stack
 ###############################################################################
 
-if [ -d "${COMPOSE_DIR}" ] && [ -f "${COMPOSE_DIR}/docker-compose.yml" ]; then
+if [ -d "${COMPOSE_DIR}" ] && [ -f "${COMPOSE_FILE}" ]; then
+
+    log_info "Stopping Docker Compose stack..."
 
     cd "${COMPOSE_DIR}"
-
-    log_info "Stopping containers and removing volumes..."
 
     docker compose down -v --remove-orphans || true
 
 else
 
-    log_warn "Compose files not found. Falling back to direct container cleanup."
+    log_warn "Compose directory not found. Falling back to manual cleanup."
 
-    docker stop n8n-automation-core n8n-postgres-db >/dev/null 2>&1 || true
+    docker stop n8n-automation-core >/dev/null 2>&1 || true
+    docker stop n8n-postgres-db >/dev/null 2>&1 || true
 
-    docker rm n8n-automation-core n8n-postgres-db >/dev/null 2>&1 || true
+    docker rm n8n-automation-core >/dev/null 2>&1 || true
+    docker rm n8n-postgres-db >/dev/null 2>&1 || true
 
 fi
 
@@ -66,30 +76,58 @@ fi
 # Network Cleanup
 ###############################################################################
 
-log_info "Cleaning orphaned Docker networks..."
+log_info "Removing Docker networks..."
 
 docker network rm soar_internal_net >/dev/null 2>&1 || true
+docker network rm active-defense-auto-quarantine_default >/dev/null 2>&1 || true
 
 ###############################################################################
 # Volume Cleanup
 ###############################################################################
 
-log_info "Cleaning lab volumes..."
+log_info "Removing Docker volumes..."
 
 docker volume rm n8n_enterprise_data >/dev/null 2>&1 || true
 docker volume rm n8n_enterprise_postgres >/dev/null 2>&1 || true
 
 ###############################################################################
-# Optional Garbage Collection
+# Container Cleanup
+###############################################################################
+
+log_info "Removing any remaining containers..."
+
+docker rm -f n8n-automation-core >/dev/null 2>&1 || true
+docker rm -f n8n-postgres-db >/dev/null 2>&1 || true
+
+###############################################################################
+# Image Cleanup
 ###############################################################################
 
 log_info "Removing dangling Docker resources..."
 
-docker system prune -f >/dev/null 2>&1 || true
+docker system prune -af >/dev/null 2>&1 || true
+
+###############################################################################
+# Remove Installation Files
+###############################################################################
+
+if [ -d "${BASE_DIR}" ]; then
+
+    log_info "Removing installation directory..."
+
+    rm -rf "${BASE_DIR}"
+
+    log_success "Deleted ${BASE_DIR}"
+
+fi
 
 ###############################################################################
 # Success
 ###############################################################################
 
-log_success "Environment teardown complete."
+log_success "Rollback completed successfully."
+log_success "Docker containers removed."
+log_success "Docker networks cleaned."
+log_success "Docker volumes cleaned."
+log_success "Installation directory removed."
 log_success "Host port 80 has been released."
