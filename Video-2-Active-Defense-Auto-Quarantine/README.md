@@ -123,15 +123,73 @@ Execute the deployment script to prepare permissions, environment variables, and
 Open an SSH or console session to **FortiGate** (`192.168.10.1`) and execute the complete, unpruned configuration script:
 
 ```fortios
+
+
+config firewall vip
+    edit "SSH-TO-N8N"
+        set extip 172.24.66.58
+        set mappedip "192.168.10.2"
+        set extintf "any"
+        set portforward enable
+        set extport 2222
+        set mappedport 22
+    next
+end
+
+ssh root@172.24.66.58 -p 2222
+
+
 config system interface
-    edit "port2"
+    edit "TRUNK"
+        set vdom "root"
+        set type aggregate
+        set device-identification enable
+        set lldp-transmission enable
+        set role lan
+        set snmp-index 9
+        set ip-managed-by-fortiipam disable
+        set lacp-mode passive
+    next
+    edit "VLAN_QC_40"
+        set vdom "root"
+        set ip 192.168.40.1 255.255.255.0
+        set allowaccess ping https ssh http
+        set alias "USERS"
+        set device-identification enable
+        set role lan
+        set snmp-index 10
+        set ip-managed-by-fortiipam disable
+        set interface "port2"
+        set vlanid 40
+    next
+    edit "VLAN_QC_10"
         set vdom "root"
         set ip 192.168.10.1 255.255.255.0
         set allowaccess ping https ssh http
-        set type physical
-        set snmp-index 2
+        set alias "SERVERS"
+        set device-identification enable
+        set role lan
+        set snmp-index 11
+        set ip-managed-by-fortiipam disable
+        set interface "port2"
+        set vlanid 10
     next
 end
+config system zone
+    edit "WAN"
+        set interface "port1"
+    next
+    edit "USERS"
+        set interface "VLAN_QC_40"
+    next
+    edit "DMZ"
+        set interface "port3"
+    next
+    edit "SERVERS"
+        set interface "VLAN_QC_10"
+    next
+end
+
 
 config system accprofile
     edit "prof_soar_automation"
@@ -208,6 +266,17 @@ config firewall policy
         set action accept
         set srcaddr "all"
         set dstaddr "all"
+        set schedule "always"
+        set service "ALL"
+        set logtraffic all
+    next
+    edit 4
+        set name "VIP TO INTERNAL"
+        set srcintf "WAN"
+        set dstintf "SERVERS"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "SSH-TO-N8N"
         set schedule "always"
         set service "ALL"
         set logtraffic all
