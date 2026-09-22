@@ -76,17 +76,17 @@ The entire lab architecture operates strictly inside the `192.168.10.0/24` subne
 
 ## ⚙️ How the Autonomous Feedback Loop Operates
 
-1. **Adversary Probing (`192.168.10.3`):**  
+1. **Adversary Probing (`192.168.40.3`):**  
    The Kali node runs high-frequency TCP SYN scans or flood attempts against the FortiGate gateway (`192.168.40.1`).
 2. **Perimeter Detection:**  
    FortiOS DoS policy (`DOS_DETECT_SYN_SWEEP`) intercepts the anomalous rate, generating event log ID `0100022001`.
 3. **Stitch Activation:**  
    An automated FortiOS Stitch catches the event log and dispatches an HTTP POST payload containing `%%log.srcip%%` to `http://192.168.10.2:80/webhook/quarantine`.
 4. **SOAR Logic & Whitelist Validation:**  
-   The containerized n8n engine extracts `192.168.10.3`, runs it against internal whitelist filters (`192.168.10.1`, `192.168.10.2`, `127.0.0.1`), and prepares the FortiOS CMDB payloads.
+   The containerized n8n engine extracts `192.168.40.3`, runs it against internal whitelist filters (`192.168.10.1`, `192.168.10.2`, `127.0.0.1`), and prepares the FortiOS CMDB payloads.
 5. **REST API Callback:**  
    n8n triggers two authenticated HTTPS calls against `https://192.168.10.1:443`:
-   - `POST /api/v2/cmdb/firewall/address` creates `QUAR_192.168.10.3`.
+   - `POST /api/v2/cmdb/firewall/address` creates `QUAR_192.168.40.3`.
    - `PUT /api/v2/cmdb/firewall/addrgrp/GRP_ACTIVE_QUARANTINE` appends the object into the group.
 6. **Instant Enforcement:**  
    Top-priority firewall policy `POLICY_ACTIVE_QUARANTINE_DROP` instantly matches the attacker address group, drops all active sessions, and blackholes subsequent packets at the kernel level.
