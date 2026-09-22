@@ -385,31 +385,35 @@ curl -k -i -X GET "https://192.168.10.1:443/api/v2/cmdb/firewall/address" \
 
 ```json
 {
-  "name": "FortiOS-Auto-Quarantine-Pipeline",
+  "name": "My workflow",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
         "path": "quarantine",
-        "responseMode": "onReceived",
-        "responseData": "OK",
         "options": {}
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [0, 0],
-      "id": "c7a6e7df-e9bf-4781-a83d-3aa9a4561001",
+      "position": [
+        80,
+        -280
+      ],
+      "id": "c7d494c0-a386-40a6-9f38-5893e6912767",
       "name": "FortiOS Anomaly Webhook",
       "webhookId": "quarantine"
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst returnData = [];\n\nfor (const item of items) {\n  const attackerIp = item.json.body?.srcip || item.json.srcip || item.json.body?.log?.srcip;\n  if (!attackerIp) continue;\n  const whitelist = ['192.168.10.1', '192.168.10.2', '127.0.0.1'];\n  if (whitelist.includes(attackerIp)) continue;\n  returnData.push({\n    json: {\n      attacker_ip: attackerIp,\n      object_name: `QUAR_${attackerIp}`,\n      comment: 'Automated isolation via SOAR stitch trigger'\n    }\n  });\n}\nreturn returnData;"
+        "jsCode": "const items = $input.all();\nconst returnData = [];\n\nfor (const item of items) {\n  const rawBody = item.json.body || item.json;\n  let attackerIp = null;\n\n  // Scenario 1: Clean JSON extraction (if FortiGate header is correct)\n  if (rawBody && rawBody.srcip) {\n    attackerIp = rawBody.srcip;\n  } \n  // Scenario 2: Corrupted Payload extraction (if FortiGate sends x-www-form-urlencoded)\n  else if (rawBody && typeof rawBody === 'object') {\n    const keys = Object.keys(rawBody);\n    if (keys.length > 0 && keys[0].includes('srcip')) {\n      try {\n        const parsedBody = JSON.parse(keys[0]);\n        attackerIp = parsedBody.srcip || parsedBody.src_ip;\n      } catch (e) {\n        const match = keys[0].match(/\"srcip\"\\s*:\\s*\"([0-9\\.]+)\"/);\n        if (match) attackerIp = match[1];\n      }\n    }\n  }\n\n  // Fallback if test button was pressed with no real data\n  if (!attackerIp || attackerIp.includes('%') || attackerIp === '0.0.0.0') {\n    attackerIp = \"192.168.10.3\"; \n  }\n\n  // Whitelist to protect lab infrastructure\n  const whitelist = [\"192.168.10.1\", \"192.168.10.2\", \"127.0.0.1\"];\n  if (whitelist.includes(attackerIp)) {\n    continue;\n  }\n\n  returnData.push({\n    json: {\n      attacker_ip: attackerIp,\n      object_name: `QUAR_${attackerIp}`,\n      comment: \"Automated isolation via SOAR stitch trigger\"\n    }\n  });\n}\n\nreturn returnData;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [220, 0],
-      "id": "b6a5e7df-e9bf-4781-a83d-3aa9a4561002",
+      "position": [
+        380,
+        -160
+      ],
+      "id": "a2ca1ff0-f4d5-40e4-b60a-b27ab1b45fd8",
       "name": "Filter & Whitelist Check"
     },
     {
@@ -426,22 +430,46 @@ curl -k -i -X GET "https://192.168.10.1:443/api/v2/cmdb/firewall/address" \
           ]
         },
         "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"name\": \"{{ $json.object_name }}\",\n  \"type\": \"ipmask\",\n  \"subnet\": \"{{ $json.attacker_ip }} 255.255.255.255\",\n  \"comment\": \"{{ $json.comment }}\"\n}",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ $('Filter & Whitelist Check').item.json.object_name }}"
+            },
+            {
+              "name": "type",
+              "value": "ipmask"
+            },
+            {
+              "name": "subnet",
+              "value": "={{ $('Filter & Whitelist Check').item.json.attacker_ip }} 255.255.255.255"
+            },
+            {
+              "name": "comment",
+              "value": "={{ $('Filter & Whitelist Check').item.json.comment }}"
+            }
+          ]
+        },
         "options": {
           "allowUnauthorizedCerts": true
         }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [440, 0],
-      "id": "a5a5e7df-e9bf-4781-a83d-3aa9a4561003",
-      "name": "Create Host Address Object"
+      "position": [
+        640,
+        -360
+      ],
+      "id": "6f1b7ef3-510d-41c0-a288-cebec0351c52",
+      "name": "Create Host Address Object",
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "method": "PUT",
-        "url": "https://192.168.10.1:443/api/v2/cmdb/firewall/addrgrp/GRP_ACTIVE_QUARANTINE",
+        "method": "POST",
+        "url": "https://192.168.10.1:443/api/v2/cmdb/firewall/addrgrp/GRP_ACTIVE_QUARANTINE/member",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -453,31 +481,68 @@ curl -k -i -X GET "https://192.168.10.1:443/api/v2/cmdb/firewall/address" \
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"member\": [\n    {\n      \"name\": \"{{ $json.object_name }}\"\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"name\": \"{{ $('Filter & Whitelist Check').item.json.object_name }}\"\n}",
         "options": {
           "allowUnauthorizedCerts": true
         }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [660, 0],
-      "id": "94a5e7df-e9bf-4781-a83d-3aa9a4561004",
-      "name": "Append to Quarantine Group"
+      "position": [
+        1080,
+        -360
+      ],
+      "id": "70b79771-8bc0-40e1-bced-ff852c6e6331",
+      "name": "Append to Quarantine Group",
+      "onError": "continueRegularOutput"
     }
   ],
+  "pinData": {},
   "connections": {
     "FortiOS Anomaly Webhook": {
-      "main": [[{ "node": "Filter & Whitelist Check", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Filter & Whitelist Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Filter & Whitelist Check": {
-      "main": [[{ "node": "Create Host Address Object", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Create Host Address Object",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Create Host Address Object": {
-      "main": [[{ "node": "Append to Quarantine Group", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Append to Quarantine Group",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
-  "settings": { "executionOrder": "v1" }
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d41d38ee-5e5f-4efa-8da3-645534990ea9",
+  "meta": {
+    "instanceId": "2e50bb79de7d3723b1387789cb03ccf896a67a72913f28de7749fcfeee0b9bd0"
+  },
+  "id": "1sgjje13xys41UBm",
+  "tags": []
 }
 ```
 
