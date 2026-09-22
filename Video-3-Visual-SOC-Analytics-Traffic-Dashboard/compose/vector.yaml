@@ -1,4 +1,3 @@
-# filepath: compose/vector/vector.yaml
 sources:
   fortigate_syslog:
     type: "socket"
