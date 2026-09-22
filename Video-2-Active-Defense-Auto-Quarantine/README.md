@@ -421,7 +421,7 @@ curl -k -i -X GET "https://192.168.10.1:443/api/v2/cmdb/firewall/address" \
           "parameters": [
             {
               "name": "Authorization",
-              "value": "9qq5nHxbxc80Nt7Nbb6dd5hGfzxjqn"
+              "value": "Bearer 9qq5nHxbxc80Nt7Nbb6dd5hGfzxjqn"
             }
           ]
         },
@@ -447,7 +447,7 @@ curl -k -i -X GET "https://192.168.10.1:443/api/v2/cmdb/firewall/address" \
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer autoquarantine-sec-token-xyz123"
+              "value": "Bearer 9qq5nHxbxc80Nt7Nbb6dd5hGfzxjqn"
             }
           ]
         },
