@@ -17,7 +17,7 @@ This stitch dispatches an outbound HTTP POST webhook containing the event payloa
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Node 1** | `FGT-CORE-01` | `192.168.10.1/24` | Static / `00:09:0F:09:00:01` | `port2` (Internal LAN) | Gateway, inspection engine, automation stitch trigger, REST API server |
 | **Node 2** | `alpine-soar-node` | `192.168.10.2/24` | Dynamic / VM-assigned | `eth0` | Alpine Linux 3.24 host running Docker Engine and n8n SOAR worker |
-| **Node 3** | `kali-attacker-01` | `192.168.10.3/24` | Dynamic / VM-assigned | `eth0` | Attacker node launching SYN scans, port probes, and adversary emulation |
+| **Node 3** | `kali-attacker-01` | `192.168.40.3/24` | Dynamic / VM-assigned | `eth0` | Attacker node launching SYN scans, port probes, and adversary emulation |
 
 ---
 
@@ -28,7 +28,7 @@ This stitch dispatches an outbound HTTP POST webhook containing the event payloa
 | `LAB_SUBNET` | `192.168.10.0/24` | Global Network | Common broadcast domain and security trust boundary |
 | `FGT_IP` | `192.168.10.1` | FortiGate | FortiGate `port2` gateway address |
 | `ALPINE_IP` | `192.168.10.2` | Alpine Host | Docker engine host running orchestration stack |
-| `KALI_IP` | `192.168.10.3` | Attacker Host | IP address of attacking workstation |
+| `KALI_IP` | `192.168.40.3` | Attacker Host | IP address of attacking workstation |
 | `N8N_HOST_PORT` | `80` | Alpine Docker Host | Host listening port bound to n8n webhook listener |
 | `FGT_REST_PORT` | `443` | FortiGate Management | HTTPS listener for FortiOS REST API calls |
 | `FGT_API_TOKEN` | `autoquarantine-sec-token-xyz123` | FortiOS & n8n | Bearer token for REST API administrative access |
