@@ -19,16 +19,15 @@ Explore the individual modular project stages and architectural documentation:
 | Stage / Component | Document Path | Operational Focus |
 | :--- | :--- | :--- |
 | **Lab Architecture** | [📘 `docs/Lab-Matrix.md`](https://github.com/rabakuku/Youtube/blob/main/Video-2-Active-Defense-Auto-Quarantine/docs/Lab-Matrix.md) | Topology mapping, variable declarations, protocol schema, and event flow |
-| **Container Host** | [🐧 `docs/install-docker.md`](https://github.com/rabakuku/Youtube/blob/main/Video-2-Active-Defense-Auto-Quarantine/docs/install-docker.md) | Hardened Alpine Linux 3.24 base configuration, OpenRC, and Docker Compose v2 |
 | **Compose Stack** | [🐳 `compose/docker-compose.yml`](https://github.com/rabakuku/Youtube/blob/main/Video-2-Active-Defense-Auto-Quarantine/compose/docker-compose.yml) & [🔐 `compose/.env.example`](https://github.com/rabakuku/Youtube/blob/main/Video-2-Active-Defense-Auto-Quarantine/compose/.env.example) | Production n8n automation worker linked to PostgreSQL 16 backend on port 80 |
 | **Workflow Engine** | [⚡ `docs/Configuration.md`](https://github.com/rabakuku/Youtube/blob/main/Video-2-Active-Defense-Auto-Quarantine/docs/Configuration.md) | Ingestion webhook endpoint, IP sanitization, CIDR whitelist, and JSON workflow |
 | **Security Fabric** | [🛡️ `docs/Fortinet.md`](https://github.com/rabakuku/Youtube/blob/main/Video-2-Active-Defense-Auto-Quarantine/docs/Fortinet.md) | FortiOS REST API admin, DoS sensors, dynamic address groups, and automation stitches |
-| **Master Technical Runbook** | [📖 `docs/main.md`](https://github.com/rabakuku/Youtube/blob/main/Video-2-Active-Defense-Auto-Quarantine/docs/main.md) | Comprehensive, unpruned consolidated manual covering the entire deployment |
+| **Master Technical Runbook** | [📖 `README.md`](https://github.com/rabakuku/Youtube/blob/main/Video-2-Active-Defense-Auto-Quarantine/README.md) | Comprehensive, unpruned consolidated manual covering the entire deployment |
 | **Automated Deployment** | [🚀 `scripts/setup.sh`](https://github.com/rabakuku/Youtube/blob/main/Video-2-Active-Defense-Auto-Quarantine/scripts/setup.sh) | Idempotent shell installer verifying Docker, generating keys, and bootstrapping services |
 | **Rollback & Teardown** | [🧹 `scripts/rollback.sh`](https://github.com/rabakuku/Youtube/blob/main/Video-2-Active-Defense-Auto-Quarantine/scripts/rollback.sh) | Clean one-command teardown script purging containers, networks, and volumes |
 | **Interactive Presentation** | [📽️ `presentation/PowerPoint.html`](https://github.com/rabakuku/Youtube/blob/main/Video-2-Active-Defense-Auto-Quarantine/presentation/PowerPoint.html) | Offline-ready, zero-dependency cybersecurity slide deck with inline vector engines |
 | **Spoken Teleprompter** | [🎙️ `presentation/Teleprompter.md`](https://github.com/rabakuku/Youtube/blob/main/Video-2-Active-Defense-Auto-Quarantine/presentation/Teleprompter.md) | Synchronized 3–4 sentence voiceover teleprompter script for video recording |
-| **YouTube Packaging** | [📈 `marketing/YouTube-Marketing.md`](https://github.com/rabakuku/Youtube/blob/main/Video-2-Active-Defense-Auto-Quarantine/marketing/YouTube-Marketing.md) | High-CTR title hooks, SEO description, thumbnail concepts, and search tags |
+
 
 ---
 
