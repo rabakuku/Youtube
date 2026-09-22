@@ -205,10 +205,10 @@ end
 config system accprofile
     edit "prof_soar_automation"
         set comments "SOAR REST API Profile for Dynamic Quarantine"
-        set firewallgrp read-write
-        set netgrp read
+        set fwgrp read-write
+        set netgrp read-write
+        set sysgrp read-write
         set loggrp read
-        set sysgrp read
     next
 end
 
