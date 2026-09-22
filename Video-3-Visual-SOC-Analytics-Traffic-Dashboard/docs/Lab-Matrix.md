@@ -1,3 +1,8 @@
+To establish the foundational L2/L3 topology and communication schema for your SIEM architecture, you can refer to the file named "Fortinet Lab in Eve-NG" for managing your lab nodes, wiping NVRAM before initial configurations, or utilizing shared project folders.
+
+Below is the definitive architecture matrix mapping the traffic generation from VLAN 40 through the FortiGate inspection engine, terminating at the Alpine Docker stack on VLAN 10.
+
+```markdown
 <!-- filepath: docs/Lab-Matrix.md -->
 # Lab Architecture Matrix: Zero-Cost Visual SOC SIEM
 
@@ -17,3 +22,25 @@ This environment simulates a real-time Security Operations Center (SOC) dashboar
 3. **Log Streaming (UDP 514):** FortiGate forwards real-time syslog data over VLAN 10 to Vector (`192.168.10.2:514`).
 4. **Parsing & Indexing (TCP 3100):** Vector parses the FortiOS key-value pairs, enriches the data (GeoIP mapping), and pushes it to Loki (`192.168.10.2:3100`).
 5. **Visualization (TCP 80):** Grafana (`192.168.10.2:80`) queries Loki via LogQL to render the live NOC/SOC visual wallboards. Kali Linux (or another network client) connects to port 80 to view the dashboard.
+
+```
+
+### Zero-Trust Verification Blocker
+
+Before proceeding to Stage 2, execute the following commands on your nodes to verify L2/L3 reachability and ARP resolution across the VLANs.
+
+**On Alpine Linux (`192.168.10.2`):**
+
+1. Ping the FortiGate gateway on VLAN 10:
+`ping -c 4 192.168.10.1`
+2. Verify ARP resolution for the FortiGate:
+`ip neigh show 192.168.10.1`
+
+**On Kali Linux (`192.168.40.3`):**
+
+1. Ping the FortiGate gateway on VLAN 40:
+`ping -c 4 192.168.40.1`
+2. Ping the Alpine Linux host to ensure inter-VLAN routing is active on the FortiGate:
+`ping -c 4 192.168.10.2`
+3. Verify ARP resolution for the FortiGate:
+`arp -a 192.168.40.1`
