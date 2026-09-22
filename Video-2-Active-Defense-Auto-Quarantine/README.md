@@ -360,6 +360,14 @@ NOTE: The bearer of this API key will be granted all access privileges assigned 
 
 ### Test from the Alpine Lix
 ```bash
+
+#From the fortigate
+diagnose debug reset
+diagnose debug application httpsd -1
+diagnose debug console timestamp enable
+diagnose debug enable
+
+#From Alpine
 curl -k -i -X GET "https://192.168.10.1:443/api/v2/cmdb/firewall/address" \
 -H "Authorization: Bearer 9qq5nHxbxc80Nt7Nbb6dd5hGfzxjqn"
 ```
