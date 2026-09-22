@@ -212,19 +212,6 @@ config system accprofile
     next
 end
 
-config system api-user
-    edit "soar-api-admin"
-        set comments "n8n SOAR API Integration"
-        set accprofile "prof_soar_automation"
-        set vdom "root"
-        config trusthost
-            edit 1
-                set ipv4-trusthost 192.168.10.2 255.255.255.255
-            next
-        end
-    next
-end
-
 config firewall address
     edit "QUAR_PLACEHOLDER"
         set type ipmask
@@ -350,9 +337,22 @@ config system automation-stitch
 end
 ```
 
-### Step 3.1 Getting the api key for the api user:
+### Step 3.1 Getting the api user & key for the api user:
 ```fortios
+config system api-user
+    edit "soar-api-admin"
+        set comments "n8n SOAR API Integration"
+        set accprofile "prof_soar_automation"
+        set vdom "root"
+        config trusthost
+            edit 1
+                set ipv4-trusthost 192.168.10.2 255.255.255.255
+            next
+        end
+    next
+end
 
+execute api-user generate-key soar-api-admin
 New API key: 9qq5nHxbxc80Nt7Nbb6dd5hGfzxjqn
 NOTE: The bearer of this API key will be granted all access privileges assigned to the api-user soar-api-admin.
 ---
@@ -366,6 +366,9 @@ diagnose debug reset
 diagnose debug application httpsd -1
 diagnose debug console timestamp enable
 diagnose debug enable
+
+diagnose debug disable
+diagnose debug reset
 
 #From Alpine
 curl -k -i -X GET "https://192.168.10.1:443/api/v2/cmdb/firewall/address" \
