@@ -1,8 +1,7 @@
-
 # filepath: scripts/rollback.sh
-#!/usr/bin/env bash
+#!/bin/sh
 # -----------------------------------------------------------------------------
-# Fortinet Visual SOC Lab - Teardown and Rollback Script
+# Fortinet Visual SOC Lab - Teardown and Rollback Script (Alpine Linux)
 # -----------------------------------------------------------------------------
 # Safely spins down the container stack, removes persistent local volumes, 
 # and cleans up the bridged Docker networks to reset the lab state.
@@ -20,10 +19,13 @@ if [ -d "${BASE_DIR}" ]; then
     echo "[*] Pruning unused Docker networks..."
     docker network prune -f
     
-    echo "[+] Rollback complete. The Docker environment is now clean."
-    echo "[!] Note: Configuration files in ${BASE_DIR} were NOT deleted."
+    echo "[*] Removing downloaded configuration files..."
+    cd ..
+    rm -rf "${BASE_DIR}"
+
+    echo "[+] Rollback complete. The Docker environment and configurations are now clean."
 else
     echo "[-] Error: Compose directory not found at ${BASE_DIR}."
-    echo "[-] Are you running this script from the project root?"
+    echo "[-] Have you run the setup.sh script yet?"
     exit 1
 fi
