@@ -1,1 +1,60 @@
+# filepath: compose/docker-compose.yml
+services:
+  vector:
+    image: timberio/vector:0.36.0-alpine
+    container_name: soc-vector
+    restart: unless-stopped
+    ports:
+      - "514:514/udp" # FortiGate Syslog Ingestion Port
+    volumes:
+      - ./vector/vector.yaml:/etc/vector/vector.yaml:ro
+      - vector_data:/var/lib/vector
+    environment:
+      - VECTOR_ENVIRONMENT=${VECTOR_ENVIRONMENT:-production}
+    depends_on:
+      - loki
+    networks:
+      - soc_net
 
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: soc-loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/local-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - soc_net
+
+  grafana:
+    image: grafana/grafana:10.3.3
+    container_name: soc-grafana
+    restart: unless-stopped
+    ports:
+      - "80:3000" # Web GUI bound to host port 80 as mandated
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-FortinetLab2026!}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      - loki
+    networks:
+      - soc_net
+
+volumes:
+  vector_data:
+    driver: local
+  loki_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  soc_net:
+    driver: bridge
