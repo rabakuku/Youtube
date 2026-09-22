@@ -215,7 +215,6 @@ end
 config system api-user
     edit "soar-api-admin"
         set comments "n8n SOAR API Integration"
-        set api-key "autoquarantine-sec-token-xyz123"
         set accprofile "prof_soar_automation"
         set vdom "root"
         config trusthost
@@ -351,7 +350,20 @@ config system automation-stitch
 end
 ```
 
+### Step 3.1 Getting the api key for the api user:
+```fortios
+
+New API key: 9qq5nHxbxc80Nt7Nbb6dd5hGfzxjqn
+NOTE: The bearer of this API key will be granted all access privileges assigned to the api-user soar-api-admin.
 ---
+```
+
+### Test from the Alpine Lix
+```bash
+curl -k -i -X GET "https://192.168.10.1:443/api/v2/cmdb/firewall/address" \
+-H "Authorization: Bearer 9qq5nHxbxc80Nt7Nbb6dd5hGfzxjqn"
+```
+
 
 ### Step 4: Import & Activate SOAR Workflow
 
@@ -392,13 +404,13 @@ end
     {
       "parameters": {
         "method": "POST",
-        "url": "[https://192.168.10.1:443/api/v2/cmdb/firewall/address](https://192.168.10.1:443/api/v2/cmdb/firewall/address)",
+        "url": "https://192.168.10.1:443/api/v2/cmdb/firewall/address",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer autoquarantine-sec-token-xyz123"
+              "value": "9qq5nHxbxc80Nt7Nbb6dd5hGfzxjqn"
             }
           ]
         },
@@ -418,7 +430,7 @@ end
     {
       "parameters": {
         "method": "PUT",
-        "url": "[https://192.168.10.1:443/api/v2/cmdb/firewall/addrgrp/GRP_ACTIVE_QUARANTINE](https://192.168.10.1:443/api/v2/cmdb/firewall/addrgrp/GRP_ACTIVE_QUARANTINE)",
+        "url": "https://192.168.10.1:443/api/v2/cmdb/firewall/addrgrp/GRP_ACTIVE_QUARANTINE",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
