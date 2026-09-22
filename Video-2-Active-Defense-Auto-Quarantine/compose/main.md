@@ -18,62 +18,6 @@ Execute the deployment script to prepare permissions, environment variables, and
 ./setup.sh
 ```
 
-*The script verifies Docker Engine prerequisites, auto-generates a 32-character hexadecimal encryption key in `.env`, pulls official container images, maps container port `5678` to host port `80`, and waits for PostgreSQL health convergence.*
----
-
-### Step-by-Step Terminal Execution Guide
-
-Execute these steps on the Alpine host (`192.168.10.2`) as `soaradmin`:
-
-1. **Create the compose directory and enter it:**
-```sh
-mkdir -p ~/soar-stack/compose && cd ~/soar-stack/compose
-
-```
-
-
-*Creates an isolated working directory for the application configuration and enters it.*
-2. **Save the configuration files:**
-Paste the two deliverables above into `docker-compose.yml` and `.env.example`. Then generate your live `.env` from the example:
-```sh
-cp .env.example .env
-
-```
-
-
-*Duplicates the template to provide active runtime variable definitions for the Compose runtime.*
-3. **Generate a random encryption key and inject it:**
-```sh
-HEX_KEY=$(head -c 16 /dev/urandom | xxd -p)
-sed -i "s/replace_with_a_secure_32_character_hex_encryption_key_here/$HEX_KEY/" .env
-
-```
-
-
-*Creates a cryptographic seed value required by n8n to encrypt stored REST API tokens on disk.*
-4. **Launch the container pipeline in the background:**
-```sh
-docker compose up -d
-
-```
-
-
-*Pulls the PostgreSQL and n8n images, builds the bridge network, initializes the database, and maps container port 5678 to host port 80.*
-
----
-
-### Zero-Trust Verification Blocker (Stage 3)
-
-Execute the following commands directly on Node 2 (`192.168.10.2`) and Node 3 (`192.168.10.3`):
-
-#### 1. Container Status & Health Check (Alpine - Node 2)
-
-```sh
-cd ~/soar-stack/compose
-docker compose ps
-
-```
-
 *Verification standard:* Both `n8n-automation-core` and `n8n-postgres-db` must report a status of `Up`, with `postgres` reporting `(healthy)`.
 
 #### 2. Host Port 80 Listener Verification (Alpine - Node 2)
