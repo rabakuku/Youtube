@@ -1,4 +1,3 @@
-```yaml
 sources:
   fortigate_syslog:
     type: "syslog"
