@@ -1,108 +1,24 @@
-```yaml
-# filepath: compose/docker-compose.yml
-services:
-  n8n:
-    image: docker.n8n.io/n8nio/n8n:${N8N_VERSION:-1.80.0}
-    container_name: n8n-automation-core
-    restart: unless-stopped
-    ports:
-      - "80:5678"
-    environment:
-      - N8N_HOST=${N8N_HOST:-192.168.10.2}
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
-      - WEBHOOK_URL=${WEBHOOK_URL:-http://192.168.10.2/}
-      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE:-UTC}
-      - NODE_ENV=production
-      - N8N_DIAGNOSTICS_ENABLED=false
-      - N8N_VERSION_NOTIFICATIONS_ENABLED=false
-      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
-      - EXECUTIONS_DATA_PRUNE=true
-      - EXECUTIONS_DATA_MAX_AGE=168
-      - EXECUTIONS_DATA_SAVE_ON_ERROR=all
-      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
-      - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=postgres
-      - DB_POSTGRESDB_PORT=5432
-      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB:-n8n_db}
-      - DB_POSTGRESDB_USER=${POSTGRES_USER:-n8n_user}
-      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
-    volumes:
-      - n8n_data:/home/node/.n8n
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      backend:
-        ipv4_address: 172.28.10.10
+## 🚀 Rapid Automated Deployment
 
-  postgres:
-    image: postgres:${POSTGRES_VERSION:-16-alpine}
-    container_name: n8n-postgres-db
-    restart: unless-stopped
-    environment:
-      - POSTGRES_DB=${POSTGRES_DB:-n8n_db}
-      - POSTGRES_USER=${POSTGRES_USER:-n8n_user}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - PGDATA=/var/lib/postgresql/data/pgdata
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-n8n_user} -d ${POSTGRES_DB:-n8n_db}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-    networks:
-      backend:
-        ipv4_address: 172.28.10.11
+### Step 1: Initialize Workspace on the Alpine Host (`192.168.10.2`)
+Log into your Alpine Linux host as `root` and retrieve the automated scripts:
 
-volumes:
-  n8n_data:
-    name: n8n_enterprise_data
-  postgres_data:
-    name: n8n_enterprise_postgres
-
-networks:
-  backend:
-    name: soar_internal_net
-    driver: bridge
-    ipam:
-      driver: default
-      config:
-        - subnet: 172.28.10.0/24
-          gateway: 172.28.10.1
-
+```sh
+apk add curl
+mkdir -p /opt/Active-Defense-Auto-Quarantine && cd /opt/Active-Defense-Auto-Quarantine
+curl -fsSL https://raw.githubusercontent.com/rabakuku/Youtube/refs/heads/main/Video-2-Active-Defense-Auto-Quarantine/scripts/setup.sh -o setup.sh
+curl -fsSL https://raw.githubusercontent.com/rabakuku/Youtube/refs/heads/main/Video-2-Active-Defense-Auto-Quarantine/scripts/rollback.sh -o rollback.sh
+chmod +x setup.sh rollback.sh
 ```
 
-```env
-# filepath: compose/.env.example
-# ==============================================================================
-# Pipeline & Orchestrator Environment Configuration
-# ==============================================================================
+### Step 2: Run Automated Idempotent Setup
+Execute the deployment script to prepare permissions, environment variables, and Docker containers:
 
-# n8n Core Application Settings
-N8N_VERSION=1.80.0
-N8N_HOST=192.168.10.2
-N8N_PROTOCOL=http
-WEBHOOK_URL=http://192.168.10.2/
-GENERIC_TIMEZONE=UTC
-N8N_ENCRYPTION_KEY=replace_with_a_secure_32_character_hex_encryption_key_here
-
-# PostgreSQL Database Backend Configuration
-POSTGRES_VERSION=16-alpine
-POSTGRES_DB=n8n_db
-POSTGRES_USER=n8n_user
-POSTGRES_PASSWORD=replace_with_a_strong_database_password_xyz789
-
-# FortiGate Target API Credentials (Consumed by SOAR Worker Node)
-FGT_HOST=192.168.10.1
-FGT_PORT=443
-FGT_API_TOKEN=autoquarantine-sec-token-xyz123
-FGT_QUARANTINE_GROUP=GRP_ACTIVE_QUARANTINE
-
+```sh
+./setup.sh
 ```
 
+*The script verifies Docker Engine prerequisites, auto-generates a 32-character hexadecimal encryption key in `.env`, pulls official container images, maps container port `5678` to host port `80`, and waits for PostgreSQL health convergence.*
 ---
 
 ### Step-by-Step Terminal Execution Guide
