@@ -1,0 +1,28 @@
+```yaml
+sources:
+  fortigate_syslog:
+    type: "syslog"
+    address: "0.0.0.0:514"
+    mode: "udp"
+
+transforms:
+  fortigate_parser:
+    type: "remap"
+    inputs:
+      - "fortigate_syslog"
+    source: |
+      . = parse_key_value!(.message)
+      .timestamp = now()
+
+sinks:
+  loki_destination:
+    type: "loki"
+    inputs:
+      - "fortigate_parser"
+    endpoint: "http://soc-loki:3100"
+    encoding:
+      codec: "json"
+    labels:
+      source: "fortigate"
+      type: "syslog"
+      action: "{{action}}"
