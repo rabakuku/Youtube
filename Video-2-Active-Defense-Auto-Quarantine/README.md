@@ -122,7 +122,7 @@ Execute the deployment script to prepare permissions, environment variables, and
 
 Open an SSH or console session to **FortiGate** (`192.168.10.1`) and execute the complete, unpruned configuration script:
 
-### Configure VIPs
+## Configure VIPs
 ```fortios
 config firewall vip
     edit "SSH-TO-N8N"
@@ -215,7 +215,7 @@ config system zone
 end
 ```
 
-### Configure Firewall Address
+## Configure Firewall Address
 ```fortios
 config firewall address
     edit "QUAR_PLACEHOLDER"
@@ -238,7 +238,7 @@ config firewall addrgrp
 end
 ```
 
-### Configure Firewall Policies
+## Configure Firewall Policies
 ```Fortios
 config firewall policy
     edit 1
@@ -288,7 +288,7 @@ config firewall policy
     next
 end
 ```
-### Configure DoS Policies
+## Configure DoS Policies
 ```fortios
 config firewall DoS-policy
     edit 1
@@ -317,7 +317,7 @@ config firewall DoS-policy
 end
 ```
 
-### Configure Automation Stitch
+## Configure Automation Stitch
 ```fortios
 config system automation-action
     edit "ACTION_NOTIFY_N8N_SOAR"
@@ -355,7 +355,7 @@ config system automation-stitch
 end
 ```
 
-### Getting the profile, api user, & key for the api user:
+## Getting the profile, api user, & key for the api user:
 ```fortios
 config system accprofile
     edit "prof_soar_automation"
@@ -386,7 +386,7 @@ NOTE: The bearer of this API key will be granted all access privileges assigned 
 ---
 ```
 
-### Test from the Alpine Lix
+## Test from the Alpine Lix
 ```bash
 
 #From the fortigate
