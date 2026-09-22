@@ -309,11 +309,16 @@ end
 config system automation-action
     edit "ACTION_NOTIFY_N8N_SOAR"
         set action-type webhook
-        set protocol http
-        set method post
-        set uri "192.168.10.2:80/webhook/quarantine"
+        set minimum-interval 20
+        set uri "192.168.10.2/webhook/quarantine"
         set http-body "{\"srcip\": \"%%log.srcip%%\", \"logid\": \"%%log.logid%%\", \"msg\": \"%%log.msg%%\", \"threat\": \"Port Scan / SYN Anomaly Detected\"}"
         set port 80
+        config http-headers
+            edit 1
+                set key "Content-Type"
+                set value "application/json"
+            next
+        end
     next
 end
 
