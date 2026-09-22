@@ -122,9 +122,8 @@ Execute the deployment script to prepare permissions, environment variables, and
 
 Open an SSH or console session to **FortiGate** (`192.168.10.1`) and execute the complete, unpruned configuration script:
 
+### Configure VIPs
 ```fortios
-
-
 config firewall vip
     edit "SSH-TO-N8N"
         set extip 172.24.66.58
@@ -147,9 +146,26 @@ config firewall vip
     next
 end
 
+config firewall vip
+    edit "SSH-TO-KALI"
+        set extip 172.24.66.58
+        set mappedip "192.168.10.2"
+        set extintf "any"
+        set portforward enable
+        set extport 2223
+        set mappedport 22
+    next
+end
+```
+
+## How to SSH from VIPs
+```bash
 ssh root@172.24.66.58 -p 2222
+ssh root@172.24.66.58 -p 2223
+```
 
-
+## Configure Interfaces
+```fortios
 config system interface
     edit "TRUNK"
         set vdom "root"
@@ -157,7 +173,6 @@ config system interface
         set device-identification enable
         set lldp-transmission enable
         set role lan
-        set snmp-index 9
         set ip-managed-by-fortiipam disable
         set lacp-mode passive
     next
@@ -168,7 +183,6 @@ config system interface
         set alias "USERS"
         set device-identification enable
         set role lan
-        set snmp-index 10
         set ip-managed-by-fortiipam disable
         set interface "port2"
         set vlanid 40
@@ -180,7 +194,6 @@ config system interface
         set alias "SERVERS"
         set device-identification enable
         set role lan
-        set snmp-index 11
         set ip-managed-by-fortiipam disable
         set interface "port2"
         set vlanid 10
@@ -200,18 +213,10 @@ config system zone
         set interface "VLAN_QC_10"
     next
 end
+```
 
-
-config system accprofile
-    edit "prof_soar_automation"
-        set comments "SOAR REST API Profile for Dynamic Quarantine"
-        set fwgrp read-write
-        set netgrp read-write
-        set sysgrp read-write
-        set loggrp read
-    next
-end
-
+### Configure Firewall Address
+```fortios
 config firewall address
     edit "QUAR_PLACEHOLDER"
         set type ipmask
@@ -231,7 +236,10 @@ config firewall addrgrp
         set comment "Dynamic SOAR quarantine blocklist"
     next
 end
+```
 
+### Configure Firewall Policies
+```Fortios
 config firewall policy
     edit 1
         set name "POLICY_ACTIVE_QUARANTINE_DROP"
@@ -273,13 +281,15 @@ config firewall policy
         set dstintf "SERVERS"
         set action accept
         set srcaddr "all"
-        set dstaddr "SSH-TO-N8N, HTTP-TO-N8N"
+        set dstaddr "SSH-TO-N8N, HTTP-TO-N8N, SSH-TO-KALI"
         set schedule "always"
         set service "ALL"
         set logtraffic all
     next
 end
-
+```
+### Configure DoS Policies
+```fortios
 config firewall DoS-policy
     edit 1
         set name "DOS_DETECT_SYN_SWEEP"
@@ -300,12 +310,15 @@ config firewall DoS-policy
                 set log enable
                 set action pass
                 set quarantine none
-                set threshold 5
+                set threshold 10
             next
         end
     next
 end
+```
 
+### Configure Automation Stitch
+```fortios
 config system automation-action
     edit "ACTION_NOTIFY_N8N_SOAR"
         set action-type webhook
@@ -342,8 +355,18 @@ config system automation-stitch
 end
 ```
 
-### Step 3.1 Getting the api user & key for the api user:
+### Getting the profile, api user, & key for the api user:
 ```fortios
+config system accprofile
+    edit "prof_soar_automation"
+        set comments "SOAR REST API Profile for Dynamic Quarantine"
+        set fwgrp read-write
+        set netgrp read-write
+        set sysgrp read-write
+        set loggrp read
+    next
+end
+
 config system api-user
     edit "soar-api-admin"
         set comments "n8n SOAR API Integration"
