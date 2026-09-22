@@ -89,6 +89,10 @@ end
 
 ```
 
+## Diagnose to make sure logs are being sent
+```fortios
+diagnose sniffer packet any 'port 514' 4 0 l
+```
 ```markdown
 # Zero-Cost Visual SOC: FortiOS SIEM Analytics Dashboard
 
