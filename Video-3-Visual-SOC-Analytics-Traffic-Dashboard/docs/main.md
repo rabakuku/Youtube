@@ -29,7 +29,7 @@ docker compose logs --tail=20 -f
 *Check for any immediate fatal crash loops or permission errors.*
 4. **Subnet HTTP Test (From Kali):**
 Open your terminal on Kali Linux (192.168.40.3) in VLAN 40 and test the routing through the FortiGate gateway (192.168.40.1 -> 192.168.10.2):
-```powershell
+```bash
 curl -I http://192.168.10.2
 ```
 
