@@ -27,12 +27,11 @@ docker compose logs --tail=20 -f
 
 
 *Check for any immediate fatal crash loops or permission errors.*
-4. **Subnet HTTP Test (From Windows PC):**
-Open PowerShell on `192.168.10.3` and test the Grafana binding:
+4. **Subnet HTTP Test (From Kali):**
+Open your terminal on Kali Linux (192.168.40.3) in VLAN 40 and test the routing through the FortiGate gateway (192.168.40.1 -> 192.168.10.2):
 ```powershell
-Invoke-WebRequest -Uri http://192.168.10.2 -UseBasicParsing
-
+curl -I http://192.168.10.2
 ```
 
 
-*You should receive a `200 OK` response with Grafana HTML content.*
+*You should receive a HTTP/1.1 200 OK or 302 Found response indicating you have successfully reached the Grafana web interface.*
