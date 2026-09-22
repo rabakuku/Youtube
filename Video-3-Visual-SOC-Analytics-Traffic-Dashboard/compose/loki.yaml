@@ -1,8 +1,4 @@
 apiVersion: 1
-
-datasources:# filepath: compose/grafana/provisioning/datasources/loki.yaml
-apiVersion: 1
-
 datasources:
   - name: Loki
     type: loki
