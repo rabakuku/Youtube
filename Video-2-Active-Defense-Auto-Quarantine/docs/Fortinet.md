@@ -15,63 +15,106 @@ This guide details the end-to-end configuration for Node 1 (`FGT-CORE-01`, `192.
 * **API Administrator**: `soar-api-admin`
 * **API Bearer Token**: `autoquarantine-sec-token-xyz123`
 * **Isolation Address Group**: `GRP_ACTIVE_QUARANTINE`
-
+```
 ---
 
 ## 2. CLI Configuration (Step-by-Step)
 
 Execute the following commands sequentially via the FortiGate administrative console or SSH session:
 
-### Step 2.1: Verify Interface Configuration
-Ensure `port2` is bound to the trust boundary and administrative HTTPS access is enabled for API interactions:
+## Configure VIPs
+```fortios
+config firewall vip
+    edit "SSH-TO-N8N"
+        set extip 172.24.66.58
+        set mappedip "192.168.10.2"
+        set extintf "any"
+        set portforward enable
+        set extport 2222
+        set mappedport 22
+    next
+end
+
+config firewall vip
+    edit "HTTP-TO-N8N"
+        set extip 172.24.66.58
+        set mappedip "192.168.10.2"
+        set extintf "any"
+        set portforward enable
+        set extport 8080
+        set mappedport 80
+    next
+end
+
+config firewall vip
+    edit "SSH-TO-KALI"
+        set extip 172.24.66.58
+        set mappedip "192.168.10.2"
+        set extintf "any"
+        set portforward enable
+        set extport 2223
+        set mappedport 22
+    next
+end
+```
+
+## How to SSH from VIPs
+```bash
+ssh root@172.24.66.58 -p 2222
+ssh root@172.24.66.58 -p 2223
+```
+
+## Configure Interfaces
 ```fortios
 config system interface
-    edit "port2"
+    edit "VLAN_QC_40"
+        set vdom "root"
+        set ip 192.168.40.1 255.255.255.0
+        set allowaccess ping https ssh http
+        set alias "USERS"
+        set device-identification enable
+        set role lan
+        set ip-managed-by-fortiipam disable
+        set interface "port2"
+        set vlanid 40
+    next
+    edit "VLAN_QC_10"
         set vdom "root"
         set ip 192.168.10.1 255.255.255.0
         set allowaccess ping https ssh http
-        set type physical
-        set snmp-index 2
+        set alias "SERVERS"
+        set device-identification enable
+        set role lan
+        set ip-managed-by-fortiipam disable
+        set interface "port2"
+        set vlanid 10
     next
-end
-
-```
-
-### Step 2.2: REST API Administrator & Access Profile
-
-Configure a granular REST API access profile granting read/write permissions to firewall policies and address objects, then instantiate the tokenized administrator account:
-
-```fortios
-config system accprofile
-    edit "prof_soar_automation"
-        set comments "SOAR REST API Profile for Dynamic Quarantine"
-        set firewallgrp read-write
-        set netgrp read
-        set loggrp read
-        set sysgrp read
-    next
-end
-
-config system api-user
-    edit "soar-api-admin"
-        set comments "n8n SOAR API Integration"
-        set api-key "autoquarantine-sec-token-xyz123"
-        set accprofile "prof_soar_automation"
+   edit "port2"
         set vdom "root"
-        config trusthost
-            edit 1
-                set ipv4-trusthost 192.168.10.2 255.255.255.255
-            next
-        end
+        set allowaccess ping https ssh http
+        set type physical
+        set description "TRUNK-Internal"
+        set alias "TRUNK"
     next
 end
-
+end
+config system zone
+    edit "WAN"
+        set interface "port1"
+    next
+    edit "USERS"
+        set interface "VLAN_QC_40"
+    next
+    edit "DMZ"
+        set interface "port3"
+    next
+    edit "SERVERS"
+        set interface "VLAN_QC_10"
+    next
+end
 ```
 
-### Step 2.3: Address Group & Quarantine Blackhole Policy
-
-Establish a placeholder object, initialize the dynamic quarantine group, and construct a top-priority `DENY` policy applied on ingress:
-
+## Configure Firewall Address
 ```fortios
 config firewall address
     edit "QUAR_PLACEHOLDER"
@@ -92,13 +135,15 @@ config firewall addrgrp
         set comment "Dynamic SOAR quarantine blocklist"
     next
 end
+```
 
+## Configure Firewall Policies
+```Fortios
 config firewall policy
-    edit 100
+   edit 1
         set name "POLICY_ACTIVE_QUARANTINE_DROP"
-        set srcintf "port2"
+        set srcintf "any"
         set dstintf "any"
-        set action deny
         set srcaddr "GRP_ACTIVE_QUARANTINE"
         set dstaddr "all"
         set schedule "always"
@@ -106,30 +151,48 @@ config firewall policy
         set logtraffic all
         set comments "SOAR automated isolation - drops attacking IPs instantly"
     next
-    edit 101
-        set name "POLICY_ALLOW_SOAR_OUTBOUND"
-        set srcintf "port2"
-        set dstintf "port2"
+    edit 2
+        set name "SERVERS TO WAN"
+        set srcintf "SERVERS"
+        set dstintf "WAN"
         set action accept
         set srcaddr "all"
-        set dstaddr "HOST_ALPINE_SOAR"
+        set dstaddr "all"
         set schedule "always"
-        set service "HTTP" "HTTPS"
+        set service "ALL"
+        set logtraffic all
+        set nat enable
+    next
+    edit 3
+        set name "USERS TO SERVERS"
+        set srcintf "USERS"
+        set dstintf "SERVERS"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "all"
+        set schedule "always"
+        set service "ALL"
+        set logtraffic all
+    next
+    edit 4
+        set name "VIP TO INTERNAL"
+        set srcintf "WAN"
+        set dstintf "SERVERS"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "SSH-TO-N8N, HTTP-TO-N8N, SSH-TO-KALI"
+        set schedule "always"
+        set service "ALL"
         set logtraffic all
     next
 end
-
 ```
-
-### Step 2.4: DoS Anomaly Sensor & Automation Stitch
-
-Configure the DoS anomaly detection policy and wire it directly to an outbound Webhook Automation Action targeting Node 2:
-
+## Configure DoS Policies
 ```fortios
 config firewall DoS-policy
     edit 1
         set name "DOS_DETECT_SYN_SWEEP"
-        set interface "port2"
+        set interface "USERS"
         set srcaddr "all"
         set dstaddr "all"
         set service "ALL"
@@ -137,52 +200,133 @@ config firewall DoS-policy
             edit "tcp_syn_flood"
                 set status enable
                 set log enable
-                set action pass
-                set quarantine none
-                set threshold 100
+                set threshold 10
             next
             edit "tcp_port_scan"
                 set status enable
                 set log enable
-                set action pass
-                set quarantine none
-                set threshold 30
+                set threshold 10
+            next
+            edit "tcp_src_session"
+                set threshold 5000
+            next
+            edit "tcp_dst_session"
+                set threshold 5000
+            next
+            edit "udp_flood"
+                set threshold 2000
+            next
+            edit "udp_scan"
+                set threshold 2000
+            next
+            edit "udp_src_session"
+                set threshold 5000
+            next
+            edit "udp_dst_session"
+                set threshold 5000
+            next
+            edit "icmp_flood"
+                set threshold 250
+            next
+            edit "icmp_sweep"
+                set threshold 100
+            next
+            edit "icmp_src_session"
+                set threshold 300
+            next
+            edit "icmp_dst_session"
+                set threshold 1000
+            next
+            edit "ip_src_session"
+                set threshold 5000
+            next
+            edit "ip_dst_session"
+                set threshold 5000
+            next
+            edit "sctp_flood"
+                set threshold 2000
+            next
+            edit "sctp_scan"
+                set threshold 1000
+            next
+            edit "sctp_src_session"
+                set threshold 5000
+            next
+            edit "sctp_dst_session"
+                set threshold 5000
             next
         end
     next
 end
+```
 
+## Configure Automation Stitch
+```fortios
 config system automation-action
     edit "ACTION_NOTIFY_N8N_SOAR"
         set action-type webhook
-        set protocol http
-        set method post
-        set uri "192.168.10.2:80/webhook/quarantine"
+        set minimum-interval 20
+        set uri "192.168.10.2/webhook/quarantine"
         set http-body "{\"srcip\": \"%%log.srcip%%\", \"logid\": \"%%log.logid%%\", \"msg\": \"%%log.msg%%\", \"threat\": \"Port Scan / SYN Anomaly Detected\"}"
         set port 80
+        config http-headers
+            edit 1
+                set key "Content-Type"
+                set value "application/json"
+            next
+        end
     next
 end
 
 config system automation-trigger
     edit "TRIG_DOS_ANOMALY"
-        set event-type event-log
-        set logid 0100022001
+        set event-type anomaly-logs
     next
 end
 
 config system automation-stitch
     edit "STITCH_AUTO_QUARANTINE"
-        set status enable
         set trigger "TRIG_DOS_ANOMALY"
         config actions
             edit 1
                 set action "ACTION_NOTIFY_N8N_SOAR"
+                set delay 15
                 set required enable
             next
         end
     next
 end
+```
 
+## Getting the profile, api user, & key for the api user:
+```fortios
+config system accprofile
+    edit "prof_soar_automation"
+        set comments "SOAR REST API Profile for Dynamic Quarantine"
+        set sysgrp read-write
+        set netgrp read-write
+        set loggrp read
+        set fwgrp read-write
+    next
+end
+
+config system api-user
+    edit "soar-api-admin"
+        set comments "n8n SOAR API Integration"
+        set api-key ENC SH2yEL0rQO3QE6WR2nIY/9EvR/J+5N+gMtnKGorTi8xfXY3QciIP4otvDrsr7M=
+        set accprofile "prof_soar_automation"
+        config trusthost
+            edit 1
+                set ipv4-trusthost 192.168.10.2 255.255.255.255
+            next
+        end
+    next
+en
+
+execute api-user generate-key soar-api-admin
+New API key: 9qq5nHxbxc80Nt7Nbb6dd5hGfzxjqn
+NOTE: The bearer of this API key will be granted all access privileges assigned to the api-user soar-api-admin.
+---
 ```
 
 ---
