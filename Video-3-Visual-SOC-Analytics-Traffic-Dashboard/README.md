@@ -10,7 +10,6 @@ When preparing your **Fortinet Lab in Eve-NG**, remember that you can wipe all n
 Here are your final publication-ready repository documents.
 
 ```markdown
-<!-- filepath: docs/main.md -->
 # Fortinet Visual SOC Lab - Master Technical Manual
 
 ## 1. Architectural Overview
@@ -18,7 +17,7 @@ This environment simulates a real-time Security Operations Center (SOC) dashboar
 
 ## 2. FortiGate Perimeter Gateway Configuration
 Before launching the SIEM stack, configure your FortiGate (`192.168.10.1`) to establish the routing and telemetry forwarding.
-
+```
 ### Interface & VLANs
 ```text
 config system interface
@@ -37,7 +36,6 @@ config system interface
         set vlanid 40
     next
 end
-
 ```
 
 ### Syslog Telemetry Forwarding
@@ -91,34 +89,6 @@ end
 
 ```
 
-## 3. Alpine Linux Automated SIEM Deployment
-
-Manual container builds are no longer required. The entire SIEM stack (Docker engine, OpenRC service registration, volume provisioning, and configuration downloads) is deployed via a single automated script pulled directly from the repository.
-
-Execute the following on your Alpine Linux host (`192.168.10.2`):
-
-```sh
-mkdir /opt/visual-soc-analytics-traffic-dashboard
-cd /opt/visual-soc-analytics-traffic-dashboard
-
-curl -sL https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/scripts/setup.sh -o setup.sh
-chmod +x setup.sh
-./setup.sh
-
-```
-
-## 4. Teardown & Rollback
-
-To safely spin down the container stack, remove persistent local volumes, and clean up the downloaded configurations, run the rollback script:
-
-```sh
-cd /opt/visual-soc-analytics-traffic-dashboard
-curl -sL https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/scripts/rollback.sh | sh
-
-```
-
-```
-
 ```markdown
 # Zero-Cost Visual SOC: FortiOS SIEM Analytics Dashboard
 
@@ -159,7 +129,22 @@ This repository contains the complete automation and configuration stack to buil
 
 ## 🚀 Quickstart Deployment
 
-No manual git cloning or file building is required. Ensure your Alpine Linux node (`192.168.10.2`) has outbound internet access to reach GitHub, then run the automated setup script. This script installs Docker, configures the services, downloads the necessary configuration YAMLs, and launches the SIEM.
+## 3. Alpine Linux Automated SIEM Deployment
+
+Manual container builds are no longer required. The entire SIEM stack (Docker engine, OpenRC service registration, volume provisioning, and configuration downloads) is deployed via a single automated script pulled directly from the repository.
+
+Execute the following on your Alpine Linux host (`192.168.10.2`):
+
+```sh
+mkdir /opt/visual-soc-analytics-traffic-dashboard
+cd /opt/visual-soc-analytics-traffic-dashboard
+
+curl -sL https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/scripts/setup.sh -o setup.sh
+chmod +x setup.sh
+./setup.sh
+
+```
+
 
 Run the following command directly in your Alpine Linux terminal:
 
