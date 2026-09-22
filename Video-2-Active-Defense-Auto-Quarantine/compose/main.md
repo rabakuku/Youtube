@@ -47,6 +47,4 @@ curl -I -s http://192.168.10.2:80/ | head -n 5
 
 *Verification standard:* Must return `HTTP/1.1 200 OK` (or `HTTP/1.1 302 Found` redirecting to `/setup`).
 
-When all four checks pass, reply with:
 
-`"I am done with Stage 3"`
