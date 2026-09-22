@@ -1,8 +1,11 @@
+# filepath: compose/vector/vector.yaml
 sources:
   fortigate_syslog:
-    type: "syslog"
+    type: "socket"
     address: "0.0.0.0:514"
     mode: "udp"
+    decoding:
+      codec: "bytes"
 
 transforms:
   fortigate_parser:
@@ -10,6 +13,7 @@ transforms:
     inputs:
       - "fortigate_syslog"
     source: |
+      .message = string!(.message)
       . = parse_key_value!(.message)
       .timestamp = now()
 
