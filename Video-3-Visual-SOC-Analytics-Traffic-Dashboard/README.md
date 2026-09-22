@@ -98,7 +98,12 @@ Manual container builds are no longer required. The entire SIEM stack (Docker en
 Execute the following on your Alpine Linux host (`192.168.10.2`):
 
 ```sh
-curl -sL [https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/scripts/setup.sh](https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/scripts/setup.sh) | sh
+mkdir /opt/visual-soc-analytics-traffic-dashboard
+cd /opt/visual-soc-analytics-traffic-dashboard
+
+curl -sL https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/scripts/setup.sh -o setup.sh
+chmod +x setup.sh
+./setup.sh
 
 ```
 
@@ -107,14 +112,14 @@ curl -sL [https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-3-Visual
 To safely spin down the container stack, remove persistent local volumes, and clean up the downloaded configurations, run the rollback script:
 
 ```sh
-curl -sL [https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/scripts/rollback.sh](https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/scripts/rollback.sh) | sh
+cd /opt/visual-soc-analytics-traffic-dashboard
+curl -sL https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/scripts/rollback.sh | sh
 
 ```
 
 ```
 
 ```markdown
-<!-- filepath: README.md -->
 # Zero-Cost Visual SOC: FortiOS SIEM Analytics Dashboard
 
 
@@ -162,6 +167,33 @@ Run the following command directly in your Alpine Linux terminal:
 curl -sL https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/scripts/setup.sh | sh
 
 ```
+
+*Ensure `soc-vector`, `soc-loki`, and `soc-grafana` all show a status of "Up".*
+2. **Port Listener Validation:**
+```bash
+netstat -tuln | grep -E ':80|:514'
+
+```
+
+
+*Verify Alpine is actively listening on `0.0.0.0:80` (TCP) and `0.0.0.0:514` (UDP).*
+3. **Container Logs Stream:**
+```bash
+docker compose logs --tail=20 -f
+
+```
+
+
+*Check for any immediate fatal crash loops or permission errors.*
+4. **Subnet HTTP Test (From Kali):**
+Open your terminal on Kali Linux (192.168.40.3) in VLAN 40 and test the routing through the FortiGate gateway (192.168.40.1 -> 192.168.10.2):
+```bash
+curl -I http://192.168.10.2
+```
+
+
+*You should receive a HTTP/1.1 200 OK or 302 Found response indicating you have successfully reached the Grafana web interface.*
+
 
 ### Accessing the Dashboard
 
