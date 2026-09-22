@@ -49,7 +49,7 @@ Explore the individual modular project stages and architectural documentation:
 +--------------------------------+     | [2] Automation Stitch       |
 |          Kali Linux            |     |     Webhook Trigger         |
 |        Attacker Node           |     |     (HTTP POST :80)         |
-|         192.168.10.3           |     v                             |
+|         192.168.40.3           |     v                             |
 +--------------------------------+    +-----------------------------------+
        |                              |        Alpine Linux 3.24          |
        |                              |         (Docker Host)             |
@@ -71,14 +71,14 @@ The entire lab architecture operates strictly inside the `192.168.10.0/24` subne
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Node 1** | `FGT-CORE-01` | `192.168.10.1` | `255.255.255.0` | `port2` | Default Gateway, Anomaly Sensor, REST API Server |
 | **Node 2** | `alpine-soar-node` | `192.168.10.2` | `255.255.255.0` | `eth0` | Docker Host running containerized n8n and PostgreSQL |
-| **Node 3** | `kali-attacker-01` | `192.168.10.3` | `255.255.255.0` | `eth0` | Attacking Node generating aggressive SYN probes |
+| **Node 3** | `kali-attacker-01` | `192.168.40.3` | `255.255.255.0` | `eth0` | Attacking Node generating aggressive SYN probes |
 
 ---
 
 ## ⚙️ How the Autonomous Feedback Loop Operates
 
 1. **Adversary Probing (`192.168.10.3`):**  
-   The Kali node runs high-frequency TCP SYN scans or flood attempts against the FortiGate gateway (`192.168.10.1`).
+   The Kali node runs high-frequency TCP SYN scans or flood attempts against the FortiGate gateway (`192.168.40.1`).
 2. **Perimeter Detection:**  
    FortiOS DoS policy (`DOS_DETECT_SYN_SWEEP`) intercepts the anomalous rate, generating event log ID `0100022001`.
 3. **Stitch Activation:**  
@@ -167,15 +167,6 @@ ssh root@172.24.66.58 -p 2223
 ## Configure Interfaces
 ```fortios
 config system interface
-    edit "TRUNK"
-        set vdom "root"
-        set type aggregate
-        set device-identification enable
-        set lldp-transmission enable
-        set role lan
-        set ip-managed-by-fortiipam disable
-        set lacp-mode passive
-    next
     edit "VLAN_QC_40"
         set vdom "root"
         set ip 192.168.40.1 255.255.255.0
@@ -198,6 +189,14 @@ config system interface
         set interface "port2"
         set vlanid 10
     next
+   edit "port2"
+        set vdom "root"
+        set allowaccess ping https ssh http
+        set type physical
+        set description "TRUNK-Internal"
+        set alias "TRUNK"
+    next
+end
 end
 config system zone
     edit "WAN"
@@ -241,9 +240,9 @@ end
 ## Configure Firewall Policies
 ```Fortios
 config firewall policy
-    edit 1
+   edit 1
         set name "POLICY_ACTIVE_QUARANTINE_DROP"
-        set srcintf "port2"
+        set srcintf "any"
         set dstintf "any"
         set srcaddr "GRP_ACTIVE_QUARANTINE"
         set dstaddr "all"
@@ -293,7 +292,7 @@ end
 config firewall DoS-policy
     edit 1
         set name "DOS_DETECT_SYN_SWEEP"
-        set interface "VLAN_QC_40"
+        set interface "USERS"
         set srcaddr "all"
         set dstaddr "all"
         set service "ALL"
@@ -301,16 +300,60 @@ config firewall DoS-policy
             edit "tcp_syn_flood"
                 set status enable
                 set log enable
-                set action pass
-                set quarantine none
                 set threshold 10
             next
             edit "tcp_port_scan"
                 set status enable
                 set log enable
-                set action pass
-                set quarantine none
                 set threshold 10
+            next
+            edit "tcp_src_session"
+                set threshold 5000
+            next
+            edit "tcp_dst_session"
+                set threshold 5000
+            next
+            edit "udp_flood"
+                set threshold 2000
+            next
+            edit "udp_scan"
+                set threshold 2000
+            next
+            edit "udp_src_session"
+                set threshold 5000
+            next
+            edit "udp_dst_session"
+                set threshold 5000
+            next
+            edit "icmp_flood"
+                set threshold 250
+            next
+            edit "icmp_sweep"
+                set threshold 100
+            next
+            edit "icmp_src_session"
+                set threshold 300
+            next
+            edit "icmp_dst_session"
+                set threshold 1000
+            next
+            edit "ip_src_session"
+                set threshold 5000
+            next
+            edit "ip_dst_session"
+                set threshold 5000
+            next
+            edit "sctp_flood"
+                set threshold 2000
+            next
+            edit "sctp_scan"
+                set threshold 1000
+            next
+            edit "sctp_src_session"
+                set threshold 5000
+            next
+            edit "sctp_dst_session"
+                set threshold 5000
             next
         end
     next
@@ -343,11 +386,11 @@ end
 
 config system automation-stitch
     edit "STITCH_AUTO_QUARANTINE"
-        set status enable
         set trigger "TRIG_DOS_ANOMALY"
         config actions
             edit 1
                 set action "ACTION_NOTIFY_N8N_SOAR"
+                set delay 15
                 set required enable
             next
         end
@@ -360,25 +403,25 @@ end
 config system accprofile
     edit "prof_soar_automation"
         set comments "SOAR REST API Profile for Dynamic Quarantine"
-        set fwgrp read-write
-        set netgrp read-write
         set sysgrp read-write
+        set netgrp read-write
         set loggrp read
+        set fwgrp read-write
     next
 end
 
 config system api-user
     edit "soar-api-admin"
         set comments "n8n SOAR API Integration"
+        set api-key ENC SH2yEL0rQO3QE6WR2nIY/9EvR/J+5N+gMtnKGorTi8xfXY3QciIP4otvDrsr7M=
         set accprofile "prof_soar_automation"
-        set vdom "root"
         config trusthost
             edit 1
                 set ipv4-trusthost 192.168.10.2 255.255.255.255
             next
         end
     next
-end
+en
 
 execute api-user generate-key soar-api-admin
 New API key: 9qq5nHxbxc80Nt7Nbb6dd5hGfzxjqn
@@ -526,41 +569,7 @@ curl -k -i -X GET "https://192.168.10.1:443/api/v2/cmdb/firewall/address" \
     }
   ],
   "pinData": {},
-  "connections": {
-    "FortiOS Anomaly Webhook": {
-      "main": [
-        [
-          {
-            "node": "Filter & Whitelist Check",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Filter & Whitelist Check": {
-      "main": [
-        [
-          {
-            "node": "Create Host Address Object",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Create Host Address Object": {
-      "main": [
-        [
-          {
-            "node": "Append to Quarantine Group",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
-  },
+  "connections": {},
   "active": true,
   "settings": {
     "executionOrder": "v1"
