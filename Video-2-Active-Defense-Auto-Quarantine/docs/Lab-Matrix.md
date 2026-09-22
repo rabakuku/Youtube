@@ -53,7 +53,7 @@ This stitch dispatches an outbound HTTP POST webhook containing the event payloa
 ## 5. End-to-End Event Sequence
 
 1. **Adversary Traffic Generation:**  
-   Node 3 (`192.168.10.3`) executes an aggressive TCP SYN sweep targeting the interface IP of Node 1 (`192.168.10.1`).
+   Node 3 (`192.168.40.3`) executes an aggressive TCP SYN sweep targeting the interface IP of Node 1 (`192.168.10.1`).
 2. **State Detection & Logging:**  
    The FortiOS security engine matches the anomaly against the preconfigured local-in policy or DoS threshold and generates an anomaly alert log.
 3. **Stitch Trigger Activation:**  
