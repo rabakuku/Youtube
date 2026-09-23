@@ -185,7 +185,7 @@
         },
         "textMode": "auto"
       },
-      "title": "Active Target Services",
+      "title": "Top Source IP",
       "type": "stat",
       "targets": [
         {
@@ -193,7 +193,7 @@
             "type": "loki",
             "uid": "Loki"
           },
-          "expr": "count(count by (service) (rate({source=\"fortigate\"} | json [1m])))",
+          "expr": "topk(1, sum by (srcip) (count_over_time({source=\"fortigate\"} | json [5m])))",
           "refId": "A"
         }
       ]
@@ -509,5 +509,5 @@
   "timezone": "browser",
   "title": "Fortinet Visual SOC",
   "uid": "fortinet-visual-soc",
-  "version": 3
+  "version": 4
 }
