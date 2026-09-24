@@ -1,5 +1,4 @@
 
-<!-- filepath: https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/config-b.md -->
 # Stage 5B: Medium Configuration - In-Memory Triage & Rate Limiting
 
 To prevent accidental quarantines caused by single mistyped passwords or scanning probes, the Tier B pipeline introduces an in-memory triage buffer and high-risk username filters.
