@@ -1,4 +1,29 @@
 ```fortios
+   config system accprofile
+       edit "PROF_WEBHOOK_QUARANTINE"
+           set comments "Access profile for honeypot auto-quarantine automation"
+           set secfabread write
+           set sysgrp read-write
+           set netgrp read-write
+           set loggrp read-write
+           set fwgrp read-write
+       next
+   end
+
+   config system api-user
+       edit "api_cowrie_quarantine"
+           set accprofile "PROF_WEBHOOK_QUARANTINE"
+           set vdom "root"
+           config trusthost
+               edit 1
+                   set ipv4-trusthost 192.168.10.2 255.255.255.255
+               next
+           end
+       next
+   end
+
+execute api-user generate-key api_cowrie_quarantine
+
 config firewall address
     edit "NET_SERVERS_VLAN10"
         set subnet 192.168.10.0 255.255.255.0
@@ -13,6 +38,7 @@ config firewall address
         set subnet 192.168.40.3 255.255.255.255
     next
 end
+
 config system interface
     edit "port2"
         set vdom "root"
