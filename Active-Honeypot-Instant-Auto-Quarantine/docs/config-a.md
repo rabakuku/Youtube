@@ -28,7 +28,7 @@ Create a lightweight shell daemon on Alpine host (`192.168.10.2`) to monitor the
 ```sh
 #!/bin/sh
 LOG_FILE="/var/lib/docker/volumes/compose_cowrie-var/_data/log/cowrie/cowrie.json"
-FGT_URL="[https://192.168.10.1:443/api/v2/monitor/system/automation-stitch/webhook/cowrie-quarantine](https://192.168.10.1:443/api/v2/monitor/system/automation-stitch/webhook/cowrie-quarantine)"
+FGT_URL="https://192.168.10.1:443/api/v2/monitor/system/automation-stitch/webhook/cowrie-quarantine"
 TOKEN="FortiGateSuperSecretToken2026"
 
 tail -Fn0 "$LOG_FILE" | while read -r line; do
