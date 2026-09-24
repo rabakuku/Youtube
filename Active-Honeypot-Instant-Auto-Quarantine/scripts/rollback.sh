@@ -1,11 +1,11 @@
 #!/bin/sh
-# filepath: https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/setup.sh
 set -e
 
-REPO_BASE="https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine"
 COMPOSE_DIR="/opt/honeypot-quarantine/compose"
 
-echo "[+] Starting Active Deception Honeypot Deployment on Alpine Linux..."
+echo "=========================================================="
+echo "    Active Honeypot Lab - Teardown & Rollback Utility    "
+echo "=========================================================="
 
 # Verify Operating System is Alpine Linux
 if [ ! -f /etc/os-release ]; then
@@ -18,58 +18,54 @@ if [ "$ID" != "alpine" ]; then
     echo "[-] Incompatible operating system: $ID. This script is strictly configured for Alpine Linux."
     exit 1
 fi
-echo "[+] Host OS confirmed: Alpine Linux ($VERSION_ID)"
 
-# Update repository indexes and install required packages with explicit delimiter separation
-echo "[+] Updating APK repositories and ensuring dependencies are installed..."
-apk update
-apk add --no-cache \
-    curl \
-    docker \
-    docker-cli-compose \
-    iproute2 \
-    grep \
-    ca-certificates
+echo "Select a rollback option:"
+echo "1) Full Teardown (Stop containers, prune volumes, delete files, remove packages)"
+echo "2) Container & Storage Teardown (Stop stack, remove containers and volumes only)"
+echo "3) Clean Artifacts Only (Remove downloaded compose and config files)"
+echo "4) Abort Rollback"
+printf "Enter selection [1-4]: "
+read -r CHOICE
 
-# Ensure docker system group and root assignment exist
-echo "[+] Configuring Docker user permissions..."
-addgroup -S docker 2>/dev/null || true
-addgroup root docker 2>/dev/null || true
-
-# Register and start Docker daemon under OpenRC
-if ! rc-service docker status >/dev/null 2>&1; then
-    echo "[+] Registering Docker service with OpenRC default runlevel..."
-    rc-update add docker default
-    echo "[+] Starting Docker service..."
-    rc-service docker start
-else
-    echo "[+] Docker daemon is already running."
-fi
-
-# Prepare target workspace directory
-echo "[+] Creating compose directory at $COMPOSE_DIR..."
-mkdir -p "$COMPOSE_DIR"
-cd "$COMPOSE_DIR"
-
-# Download configuration artifacts directly from repository
-echo "[+] Fetching docker-compose.yml..."
-curl -fsSL "${REPO_BASE}/compose/docker-compose.yml" -o docker-compose.yml
-
-echo "[+] Fetching .env.example..."
-curl -fsSL "${REPO_BASE}/compose/.env.example" -o .env.example
-
-echo "[+] Fetching cowrie.cfg..."
-curl -fsSL "${REPO_BASE}/compose/cowrie.cfg" -o cowrie.cfg
-
-# Initialize environment file
-if [ ! -f .env ]; then
-    echo "[+] Creating .env from .env.example..."
-    cp .env.example .env
-fi
-
-# Spin up Cowrie container stack
-echo "[+] Pulling images and deploying Cowrie honeypot stack..."
-docker compose pull
-docker compose up -d
-
-echo "[+] Stack deployed successfully."
+case "$CHOICE" in
+    1)
+        echo "[+] Executing full environment rollback..."
+        if [ -d "$COMPOSE_DIR" ]; then
+            cd "$COMPOSE_DIR"
+            if [ -f docker-compose.yml ]; then
+                docker compose down -v --remove-orphans || true
+            fi
+            cd /
+            rm -rf /opt/honeypot-quarantine
+        fi
+        echo "[+] Stopping Docker service..."
+        rc-service docker stop || true
+        rc-update del docker default || true
+        echo "[+] Removing installed tools..."
+        apk del docker docker-cli-compose || true
+        echo "[+] Complete teardown finished."
+        ;;
+    2)
+        echo "[+] Tearing down containers and volumes..."
+        if [ -d "$COMPOSE_DIR" ]; then
+            cd "$COMPOSE_DIR"
+            if [ -f docker-compose.yml ]; then
+                docker compose down -v --remove-orphans
+            fi
+        fi
+        echo "[+] Honeypot container services stopped and volumes purged."
+        ;;
+    3)
+        echo "[+] Removing configuration files..."
+        rm -rf /opt/honeypot-quarantine
+        echo "[+] Artifact directory /opt/honeypot-quarantine removed."
+        ;;
+    4)
+        echo "[+] Rollback aborted."
+        exit 0
+        ;;
+    *)
+        echo "[-] Invalid selection. Exiting."
+        exit 1
+        ;;
+esac
