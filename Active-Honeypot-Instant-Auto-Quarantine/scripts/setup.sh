@@ -1,5 +1,5 @@
-
 #!/bin/sh
+# filepath: https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/setup.sh
 set -e
 
 REPO_BASE="https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine"
@@ -20,35 +20,28 @@ if [ "$ID" != "alpine" ]; then
 fi
 echo "[+] Host OS confirmed: Alpine Linux ($VERSION_ID)"
 
-# Check and install required packages
-REQUIRED_PKGS="curl docker docker-cli-compose iproute2 grep"
-MISSING_PKGS=""
+# Update package repository index and install all dependencies directly
+echo "[+] Updating APK repositories and installing dependencies..."
+apk update
+apk add --no-cache curl docker docker-cli-compose iproute2 grep ca-certificates
 
-for pkg in $REQUIRED_PKGS; do
-    if ! apk info -e "$pkg" >/dev/null 2>&1; then
-        MISSING_PKGS="$MISSING_PKGS$pkg"
-    fi
-done
+# Ensure docker group exists and current user has socket permissions
+echo "[+] Configuring Docker user permissions..."
+addgroup -S docker 2>/dev/null || true
+addgroup root docker 2>/dev/null || true
 
-if [ -n "$MISSING_PKGS" ]; then
-    echo "[+] Installing missing packages via apk:$MISSING_PKGS"
-    apk update
-    apk add --no-cache $MISSING_PKGS
-else
-    echo "[+] All required packages are already installed."
-fi
-
-# Enable and start Docker daemon if not running
+# Register and start Docker daemon via OpenRC
 if ! rc-service docker status >/dev/null 2>&1; then
-    echo "[+] Starting Docker service..."
+    echo "[+] Registering Docker service with OpenRC default runlevel..."
     rc-update add docker default
+    echo "[+] Starting Docker daemon..."
     rc-service docker start
 else
-    echo "[+] Docker daemon is running."
+    echo "[+] Docker daemon is already running."
 fi
 
-# Prepare target directory structure
-echo "[+] Creating compose directory at $COMPOSE_DIR..."
+# Prepare target directory
+echo "[+] Creating compose workspace at $COMPOSE_DIR..."
 mkdir -p "$COMPOSE_DIR"
 cd "$COMPOSE_DIR"
 
@@ -62,14 +55,14 @@ curl -fsSL "${REPO_BASE}/compose/.env.example" -o .env.example
 echo "[+] Fetching cowrie.cfg..."
 curl -fsSL "${REPO_BASE}/compose/cowrie.cfg" -o cowrie.cfg
 
-# Initialize environment variables
+# Initialize environment configuration file
 if [ ! -f .env ]; then
-    echo "[+] Creating .env from .env.example..."
+    echo "[+] Initializing .env from .env.example..."
     cp .env.example .env
 fi
 
-# Spin up Cowrie container stack
-echo "[+] Deploying Cowrie honeypot stack..."
+# Spin up Cowrie honeypot container stack
+echo "[+] Pulling Cowrie image and starting containers..."
 docker compose pull
 docker compose up -d
 
