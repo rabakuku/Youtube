@@ -101,7 +101,20 @@ Configure FortiGate with the Virtual IP (VIP), firewall access policy, incoming 
 Apply the configuration from [docs/Fortinet-cli.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/Fortinet-cli.md) on the FortiGate console:
 
 ```fortios
-
+config firewall address
+    edit "NET_SERVERS_VLAN10"
+        set subnet 192.168.10.0 255.255.255.0
+    next
+    edit "NET_USERS_VLAN40"
+        set subnet 192.168.40.0 255.255.255.0
+    next
+    edit "HOST_ALPINE_HONEYPOT"
+        set subnet 192.168.10.2 255.255.255.255
+    next
+    edit "HOST_KALI_ATTACKER"
+        set subnet 192.168.40.3 255.255.255.255
+    next
+end
 config system interface
     edit "port2"
         set vdom "root"
@@ -179,17 +192,28 @@ config firewall policy
         set logtraffic all
     next
 end
+    edit 20
+        set name "OUTBOUND_HONEYPOT_WEBHOOK_TO_FGT"
+        set srcintf "SERVERS"
+        set dstintf "SERVERS"
+        set action accept
+        set srcaddr "HOST_ALPINE_HONEYPOT"
+        set dstaddr "all"
+        set schedule "always"
+        set service "HTTPS"
+        set logtraffic all
+    next
+end
 
 config system automation-trigger
     edit "TRIG_COWRIE_QUARANTINE"
-        set event-type webhook
+        set event-type incoming-webhook
     next
 end
 
 config system automation-action
     edit "ACT_QUARANTINE_ATTACKER_IP"
         set action-type quarantine
-        set quarantine-log enable
     next
 end
 
