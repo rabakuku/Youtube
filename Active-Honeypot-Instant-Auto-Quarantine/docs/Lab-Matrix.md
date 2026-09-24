@@ -1,5 +1,4 @@
 ```markdown
-<!-- filepath: https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/Lab-Matrix.md -->
 # Lab Architecture & Topology Matrix: Active Honeypot Instant Auto-Quarantine
 
 ## 1. Architectural Overview
@@ -21,7 +20,7 @@ This deployment establishes an active deception perimeter using a containerized 
 ## 3. Global Variable Declarations
 
 ```text
-GITHUB_URL="[https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine)"
+GITHUB_URL="https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine"
 VLAN_SERVERS_ID="10"
 VLAN_USERS_ID="40"
 SUBNET_SERVERS="192.168.10.0/24"
