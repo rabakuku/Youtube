@@ -24,7 +24,7 @@ Deploy the Python-based lightweight triage script inside Alpine:
    from collections import defaultdict
 
    LOG_PATH = "/var/lib/docker/volumes/compose_cowrie-var/_data/log/cowrie/cowrie.json"
-   FGT_WEBHOOK = "[https://192.168.10.1:443/api/v2/monitor/system/automation-stitch/webhook/cowrie-quarantine](https://192.168.10.1:443/api/v2/monitor/system/automation-stitch/webhook/cowrie-quarantine)"
+   FGT_WEBHOOK = "https://192.168.10.1:443/api/v2/monitor/system/automation-stitch/webhook/cowrie-quarantine"
    TOKEN = "FortiGateSuperSecretToken2026"
 
    HIGH_RISK_USERS = {"root", "admin", "support", "ubnt", "cisco"}
