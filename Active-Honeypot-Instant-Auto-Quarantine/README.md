@@ -51,6 +51,46 @@ For the detailed matrix, consult [docs/Lab-Matrix.md](https://github.com/rabakuk
 
 ---
 
+## 0. Honeypot Deployment on Alpine Linux
+
+1. Connect to the FortiGate CLI console and create the access profile and API user:
+```fortios
+   config system accprofile
+       edit "PROF_WEBHOOK_QUARANTINE"
+           set comments "Access profile for honeypot auto-quarantine automation"
+           set secfabread write
+           set sysgrp read-write
+           set netgrp read-write
+           set loggrp read-write
+           set fwgrp read-write
+       next
+   end
+
+   config system api-user
+       edit "api_cowrie_quarantine"
+           set accprofile "PROF_WEBHOOK_QUARANTINE"
+           set vdom "root"
+           config trusthost
+               edit 1
+                   set ipv4-trusthost 192.168.10.2 255.255.255.255
+               next
+           end
+       next
+   end
+```
+
+Generate the API token:
+```fortios
+execute api-user generate-key api_cowrie_quarantine
+```
+
+```fortios
+Expected Output:
+
+New API key: 8q9N4k6Y9H3pZ1r... (copy this generated key)
+```
+---
+
 ## 1. Honeypot Deployment on Alpine Linux
 
 Deploy the container stack using the automated deployment utility.
