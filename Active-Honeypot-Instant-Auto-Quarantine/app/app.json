@@ -1,1 +1,73 @@
 
+{
+  "lab_metadata": {
+    "project": "Active-Honeypot-Instant-Auto-Quarantine",
+    "version": "1.0.0",
+    "target_platform": "Alpine Linux 3.24 / FortiOS 7.4"
+  },
+  "tiers": {
+    "tier_a_basic": {
+      "name": "Basic Deception Pipeline",
+      "description": "Direct JSON log file monitoring on the Alpine Docker host. Detects failed and unauthorized SSH authentications in cowrie.json and dispatches a Layer 3 quarantine POST payload via curl to FortiOS.",
+      "cowrie": {
+        "listen_port": 2222,
+        "backend": "shell",
+        "output_plugins": ["jsonlog"]
+      },
+      "webhook_endpoint": {
+        "url": "https://192.168.10.1:443/api/v2/monitor/system/automation-stitch/webhook/cowrie-quarantine",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer FortiGateSuperSecretToken2026"
+        },
+        "payload_template": {
+          "srcip": "{{src_ip}}",
+          "event": "{{eventid}}",
+          "timestamp": "{{timestamp}}"
+        }
+      }
+    },
+    "tier_b_medium": {
+      "name": "Intelligent Triage & Rate Thresholding",
+      "description": "In-memory session state analysis. Evaluates failed attempt thresholds (>= 3 attempts within 30 seconds) or instant quarantine on high-risk username patterns (e.g., root, admin, support) before dispatching the webhook ban.",
+      "thresholds": {
+        "max_failed_attempts": 3,
+        "window_seconds": 30,
+        "instant_quarantine_users": [
+          "root",
+          "admin",
+          "support",
+          "ubnt",
+          "cisco"
+        ]
+      },
+      "rate_limit": {
+        "cooldown_seconds": 300
+      }
+    },
+    "tier_c_advanced": {
+      "name": "Fabric-Wide Telemetry & Multi-Tier SOC Dispatch",
+      "description": "Enterprise automated active defense loop. Combines zero-delay Layer 3 quarantine on the FortiGate kernel with asynchronous Syslog RFC-5424 generation, Mattermost/Slack SOC alert notifications, and automated honeypot session payload dumping.",
+      "integrations": {
+        "syslog": {
+          "enabled": true,
+          "host": "192.168.10.1",
+          "port": 514,
+          "facility": "local0",
+          "severity": "alert"
+        },
+        "soc_notifications": {
+          "enabled": true,
+          "chat_webhook_url": "https://chat.corp.internal/hooks/fortigate-soc-alerts",
+          "format": "markdown"
+        },
+        "forensics": {
+          "capture_tty_logs": true,
+          "dump_attacker_payload": true,
+          "storage_directory": "/cowrie/cowrie-git/var/lib/cowrie/tty"
+        }
+      }
+    }
+  }
+}
