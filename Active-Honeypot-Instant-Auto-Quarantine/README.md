@@ -63,7 +63,7 @@ mkdir -p /opt/honeypot-quarantine
 cd /opt/honeypot-quarantine
 
 # Download the deployment script directly from GitHub
-curl -fsSL [https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/setup.sh](https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/setup.sh) -o setup.sh
+curl -fsSL https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/setup.sh -o setup.sh
 
 # Mark executable and run
 chmod +x setup.sh
