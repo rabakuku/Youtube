@@ -88,7 +88,6 @@ Deploy the Python-based lightweight triage script inside Alpine:
 ```sh
 python3 /opt/honeypot-quarantine/scripts/triage_engine.py &
 
-```
 
 
 
