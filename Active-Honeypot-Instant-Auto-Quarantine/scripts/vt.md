@@ -97,5 +97,3 @@ ss -tulpn | grep ':2222'
 
 *Expected Output:* `docker-proxy` listening on port `2222`.
 
-Inspect these outputs. Once validated, provide the stage exit trigger:
-`"I am done with Stage 3"`
