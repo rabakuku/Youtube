@@ -105,14 +105,13 @@ end
 
 config system automation-trigger
     edit "TRIG_COWRIE_QUARANTINE"
-        set event-type webhook
+        set event-type incoming-webhook
     next
 end
 
 config system automation-action
     edit "ACT_QUARANTINE_ATTACKER_IP"
         set action-type quarantine
-        set quarantine-log enable
     next
 end
 
