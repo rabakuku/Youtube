@@ -1,3 +1,4 @@
+```fortios
 config firewall address
     edit "NET_SERVERS_VLAN10"
         set subnet 192.168.10.0 255.255.255.0
@@ -75,3 +76,4 @@ config system automation-stitch
         end
     next
 end
+```
