@@ -102,7 +102,7 @@ This upgraded script includes ASCII banners and ANSI color-coding. When an attac
 ```sh
 #!/bin/sh
 LOG_FILE="/var/lib/docker/volumes/compose_cowrie-var/_data/log/cowrie/cowrie.json"
-FGT_URL="[https://192.168.10.1:443/api/v2/monitor/system/automation-stitch/webhook/TRIG_COWRIE_QUARANTINE](https://192.168.10.1:443/api/v2/monitor/system/automation-stitch/webhook/TRIG_COWRIE_QUARANTINE)"
+FGT_URL="https://192.168.10.1:443/api/v2/monitor/system/automation-stitch/webhook/TRIG_COWRIE_QUARANTINE"
 ENV_FILE="/opt/honeypot-quarantine/compose/.env"
 
 # ANSI Color Codes for YouTube UI
@@ -116,7 +116,7 @@ NC='\033[0m' # No Color
 if [ -f "$ENV_FILE" ]; then
     TOKEN=$(grep -E '^FORTIGATE_API_KEY=' "$ENV_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
 fi
-TOKEN="${TOKEN:-PASTE_YOUR_COPIED_KEY_HERE}"
+TOKEN="Qzrqk80zhscqny1NsgNmgm4dcy1zjx"
 
 clear
 echo -e "${CYAN}"
