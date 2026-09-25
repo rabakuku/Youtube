@@ -1,31 +1,5 @@
 ```fortios
-   config system accprofile
-       edit "PROF_WEBHOOK_QUARANTINE"
-           set comments "Access profile for honeypot auto-quarantine automation"
-           set secfabread write
-           set sysgrp read-write
-           set netgrp read-write
-           set loggrp read-write
-           set fwgrp read-write
-           set secfabgrp read-write
-       next
-   end
-
-   config system api-user
-       edit "api_cowrie_quarantine"
-           set accprofile "PROF_WEBHOOK_QUARANTINE"
-           set vdom "root"
-           config trusthost
-               edit 1
-                   set ipv4-trusthost 192.168.10.2 255.255.255.255
-               next
-           end
-       next
-   end
-
-execute api-user generate-key api_cowrie_quarantine
-
-config firewall address
+  config firewall address
     edit "NET_SERVERS_VLAN10"
         set subnet 192.168.10.0 255.255.255.0
     next
@@ -116,6 +90,15 @@ config firewall vip
         set extport 2223
         set mappedport 22
     next
+edit "HTTP-TO-Dozzle"
+        set extip 172.24.66.58
+        set mappedip "192.168.10.2"
+        set extintf "any"
+        set portforward enable
+        set extport 9001
+        set mappedport 9001
+    next
+end
     edit "VIP_COWRIE_HONEYPOT_2222"
         set extip 192.168.40.1
         set mappedip "192.168.10.2"
@@ -156,7 +139,7 @@ config firewall policy
         set dstintf "SERVERS" "USERS"
         set action accept
         set srcaddr "all"
-        set dstaddr "SSH-TO-Honeypot" "SSH-TO-KALI" "HTTP-TO-Honeypot"
+        set dstaddr "SSH-TO-Honeypot" "SSH-TO-KALI" "HTTP-TO-Honeypot" "HTTP-TO-Dozzle"
         set schedule "always"
         set service "ALL"
         set logtraffic all
