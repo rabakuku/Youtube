@@ -1,6 +1,6 @@
 #!/bin/sh
 LOG_FILE="/var/lib/docker/volumes/compose_cowrie-var/_data/log/cowrie/cowrie.json"
-FGT_URL="[https://192.168.10.1:443/api/v2/monitor/system/automation-stitch/webhook/TRIG_COWRIE_QUARANTINE](https://192.168.10.1:443/api/v2/monitor/system/automation-stitch/webhook/TRIG_COWRIE_QUARANTINE)"
+FGT_URL="https://192.168.10.1:443/api/v2/monitor/system/automation-stitch/webhook/TRIG_COWRIE_QUARANTINE"
 ENV_FILE="/opt/honeypot-quarantine/compose/.env"
 
 # ANSI Color Codes
