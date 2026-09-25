@@ -208,18 +208,53 @@ config system zone
 end
 
 config firewall vip
+    edit "SSH-TO-Honeypot"
+        set extip 172.24.66.58
+        set mappedip "192.168.10.2"
+        set extintf "any"
+        set portforward enable
+        set extport 2222
+        set mappedport 22
+    next
+    edit "HTTP-TO-Honeypot"
+        set extip 172.24.66.58
+        set mappedip "192.168.10.2"
+        set extintf "any"
+        set portforward enable
+        set extport 9001
+        set mappedport 9001
+    next
+    edit "SSH-TO-KALI"
+        set extip 172.24.66.58
+        set mappedip "192.168.40.3"
+        set extintf "any"
+        set portforward enable
+        set extport 2223
+        set mappedport 22
+    next
     edit "VIP_COWRIE_HONEYPOT_2222"
         set extip 192.168.40.1
         set mappedip "192.168.10.2"
         set extintf "any"
         set portforward enable
-        set protocol tcp
         set extport 2222
         set mappedport 2222
     next
 end
 
 config firewall policy
+    edit 2
+        set name "SERVERS TO WAN"
+        set srcintf "SERVERS" "USERS"
+        set dstintf "WAN"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "all"
+        set schedule "always"
+        set service "ALL"
+        set logtraffic all
+        set nat enable
+    next
     edit 3
         set name "USERS TO SERVERS"
         set srcintf "USERS"
@@ -231,7 +266,17 @@ config firewall policy
         set service "ALL"
         set logtraffic all
     next
-end
+    edit 4
+        set name "VIP TO INTERNAL"
+        set srcintf "WAN"
+        set dstintf "SERVERS" "USERS"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "SSH-TO-Honeypot" "SSH-TO-KALI" "HTTP-TO-Honeypot"
+        set schedule "always"
+        set service "ALL"
+        set logtraffic all
+    next
     edit 20
         set name "OUTBOUND_HONEYPOT_WEBHOOK_TO_FGT"
         set srcintf "SERVERS"
