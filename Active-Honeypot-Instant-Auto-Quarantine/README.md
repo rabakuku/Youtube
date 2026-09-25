@@ -69,7 +69,6 @@ For the detailed matrix, consult [docs/Lab-Matrix.md](https://github.com/rabakuk
    config system api-user
        edit "api_cowrie_quarantine"
            set accprofile "PROF_WEBHOOK_QUARANTINE"
-           set vdom "root"
            config trusthost
                edit 1
                    set ipv4-trusthost 192.168.10.2 255.255.255.255
