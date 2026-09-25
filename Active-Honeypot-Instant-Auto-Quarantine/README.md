@@ -112,6 +112,21 @@ Enter your FortiGate API Token (from 'execute api-user generate-key'):
 Token: 8q9N4k6Y9H3pZ1r...
 ```
 
+## 1.2 Download and execute "Attack from Kali"
+
+```sh
+# Download the deployment script directly from GitHub
+curl -fsSL https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/random_ssh_brute.sh -o random_ssh_brute.sh
+
+# Mark executable and run
+chmod +x random_ssh_brute.sh
+
+#this will bruteforce 192.168.40.1; you can change the IP in the file if you need to
+./random_ssh_brute.sh
+
+```
+
+
 ### Verification & Testing (Node 2)
 
 Execute host validation steps as defined in [scripts/vt.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/vt.md):
@@ -134,6 +149,10 @@ curl -k -v -X POST "https://192.168.10.1:443/api/v2/monitor/system/automation-st
      -H "Content-Type: application/json" \
      -H "Authorization: Bearer Qzrqk80zhscqny1NsgNmgm4dcy1zjx" \
      -d '{"srcip":"192.168.40.3","event":"cowrie.login.failed"}'
+
+# Expected output from the curl
+* Connection #0 to host 192.168.10.1:443 left intact
+{"http_method":"POST","status":"success","http_status":200,"vdom":"root","path":"system","name":"automation-stitch","action":"webhook","serial":"FGVMSLTM26042556","version":"v7.4.12","build":2902}localhost:/opt/honeypot-quarantine#
 ```
 
 ---
