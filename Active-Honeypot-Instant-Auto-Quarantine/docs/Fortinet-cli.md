@@ -7,6 +7,7 @@
            set netgrp read-write
            set loggrp read-write
            set fwgrp read-write
+           set secfabgrp read-write
        next
    end
 
