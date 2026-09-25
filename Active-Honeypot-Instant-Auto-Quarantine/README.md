@@ -128,6 +128,12 @@ docker compose -f /opt/honeypot-quarantine/compose/docker-compose.yml logs --tai
 
 # 4. Perform local SSH handshake check
 ssh -p 2222 root@127.0.0.1
+
+# 5. Test to make sure the webhook is working
+curl -k -v -X POST "https://192.168.10.1:443/api/v2/monitor/system/automation-stitch/webhook/TRIG_COWRIE_QUARANTINE" \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer Qzrqk80zhscqny1NsgNmgm4dcy1zjx" \
+     -d '{"srcip":"192.168.40.3","event":"cowrie.login.failed"}'
 ```
 
 ---
