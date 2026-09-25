@@ -1,11 +1,10 @@
-
+<!-- filepath: https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/README.md -->
 [![FortiOS](https://img.shields.io/badge/FortiOS-7.4-red.svg)](https://www.fortinet.com/)
 [![Alpine Linux](https://img.shields.io/badge/Alpine%20Linux-3.24-0D597F.svg)](https://alpinelinux.org/)
 [![Docker](https://img.shields.io/badge/Docker-Cowrie%20Honeypot-2496ED.svg)](https://hub.docker.com/r/cowrie/cowrie)
 [![Security Fabric](https://img.shields.io/badge/Security%20Fabric-Automation%20Stitch-10B981.svg)](https://docs.fortinet.com/)
-```markdown
-# Active Honeypot Instant Auto-Quarantine Fabric
 
+# Active Honeypot Instant Auto-Quarantine Fabric
 
 An enterprise-grade active defense deception network combining containerized Cowrie SSH/Telnet honeypots with the FortiOS Security Fabric. When an attacker breaches the perimeter and attempts brute-force authentication against a decoy service on port `2222`, the honeypot dispatches an authenticated webhook into FortiOS, triggering an automation stitch that quarantines the attacker's source IP at Layer 3 across the entire firewall fabric in under 2 seconds.
 
@@ -15,8 +14,8 @@ An enterprise-grade active defense deception network combining containerized Cow
 
 ```text
 +-----------------------+              +-----------------------------------+              +-------------------------+
-|     Node 3: Kali      |              |          Node 1: FortiGate        |              |     Node 2: Alpine      |
-|    192.168.40.3       |              |  port2.40: .40.1 | port2.10: .10.1 |              |      192.168.10.2       |
+|     Node 3: Kali      |              |          Node 1: FortiGate        |              |      Node 2: Alpine     |
+|    192.168.40.3       |              |  port2.40: .40.1 | port2.10: .10.1 |              |       192.168.10.2      |
 +-----------+-----------+              +-----------------+-----------------+              +------------+------------+
             |                                            |                                             |
             | --- [1] TCP/2222 (SSH Connection) -------> |                                             |
@@ -37,39 +36,38 @@ An enterprise-grade active defense deception network combining containerized Cow
             |                                            |                                             |
             | -X- [6] Subsequent Packets Dropped --------|                                             |
             |     All traffic blocked at L3 ingress      |                                             |
-
 ```
 
 ### L2/L3 Addressing Schema
 
-* **Node 1a (FortiGate VM):** `192.168.10.1/24` (Interface `port2.10`, VLAN 10 Gateway, Webhook Listener `:443`)
-* **Node 1b (FortiGate VM):** `192.168.40.1/24` (Interface `port2.40`, VLAN 40 Gateway, VIP Listener `:2222`)
+* **Node 1a (FortiGate Gateway):** `192.168.10.1/24` (Interface `port2.10`, VLAN 10 Gateway, Webhook Listener `:443`)
+* **Node 1b (FortiGate Gateway):** `192.168.40.1/24` (Interface `port2.40`, VLAN 40 Gateway, VIP Listener `:2222`)
 * **Node 2 (Alpine Linux 3.24 Host):** `192.168.10.2/24` (Docker Engine, Cowrie Container Bound to Host `:2222`)
-* **Node 3 (Kali Linux Attacker):** `192.168.40.3/24` (Client subnet, initiating unauthorized SSH probes)
+* **Node 3 (Kali Linux Attacker):** `192.168.40.3/24` (Client Subnet, Initiating Unauthorized Probes)
 
-For the detailed matrix, consult [docs/Lab-Matrix.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/Lab-Matrix.md).
+For complete network interfaces, firewall zones, and protocol flow definitions, refer to [docs/Lab-Matrix.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/Lab-Matrix.md).
 
 ---
 
 ## 0. Honeypot Deployment on Alpine Linux
 
-1. Connect to the FortiGate CLI console and create the access profile and API user:
-```fortios
+1. Connect to the FortiGate CLI console and configure the access profile and API user:
+   ```fortios
    config system accprofile
        edit "PROF_WEBHOOK_QUARANTINE"
            set comments "Access profile for honeypot auto-quarantine automation"
-           set secfabread write
+           set secfabgrp read-write
            set sysgrp read-write
            set netgrp read-write
            set loggrp read-write
            set fwgrp read-write
-           set secfabgrp read-write
        next
    end
 
    config system api-user
        edit "api_cowrie_quarantine"
            set accprofile "PROF_WEBHOOK_QUARANTINE"
+           set vdom "root"
            config trusthost
                edit 1
                    set ipv4-trusthost 192.168.10.2 255.255.255.255
@@ -77,23 +75,22 @@ For the detailed matrix, consult [docs/Lab-Matrix.md](https://github.com/rabakuk
            end
        next
    end
-```
+   ```
 
-Generate the API token:
-```fortios
-execute api-user generate-key api_cowrie_quarantine
-```
+2. Generate the API token:
+   ```fortios
+   execute api-user generate-key api_cowrie_quarantine
+   ```
+   *Expected Output:*
+   ```text
+   New API key: 8q9N4k6Y9H3pZ1r... (copy this generated key)
+   ```
 
-```fortios
-Expected Output:
-
-New API key: 8q9N4k6Y9H3pZ1r... (copy this generated key)
-```
 ---
 
 ## 1. Honeypot Deployment on Alpine Linux
 
-Deploy the container stack using the automated deployment utility.
+Deploy the base container stack using the automated deployment utility.
 
 ### Deployment Instructions
 
@@ -103,17 +100,21 @@ mkdir -p /opt/honeypot-quarantine
 cd /opt/honeypot-quarantine
 
 # Download the deployment script directly from GitHub
-curl -fsSL https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/setup.sh -o setup.sh
+curl -fsSL [https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/setup.sh](https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/setup.sh) -o setup.sh
 
 # Mark executable and run
 chmod +x setup.sh
 ./setup.sh
 
+# Enter token when prompted
+======================================================================
+Enter your FortiGate API Token (from 'execute api-user generate-key'):
+Token: 8q9N4k6Y9H3pZ1r...
 ```
 
 ### Verification & Testing (Node 2)
 
-Follow the verification guide in [scripts/vt.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/vt.md):
+Execute host validation steps as defined in [scripts/vt.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/vt.md):
 
 ```sh
 # 1. Verify container runtime state
@@ -127,284 +128,67 @@ docker compose -f /opt/honeypot-quarantine/compose/docker-compose.yml logs --tai
 
 # 4. Perform local SSH handshake check
 ssh -p 2222 root@127.0.0.1
-
 ```
 
 ---
 
 ## 2. FortiOS Security Fabric & VIP Configuration
 
-Configure FortiGate with the Virtual IP (VIP), firewall access policy, incoming webhook automation trigger, and quarantine action.
+To establish the Virtual IPs, firewall policies, incoming webhook automation trigger, and Layer 3 quarantine actions on FortiOS 7.4.12:
 
-### CLI Deployment Summary
+* **CLI Step-by-Step Guide:** [docs/Fortinet-cli.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/Fortinet-cli.md)
+* **GUI Step-by-Step Guide:** [docs/Fortinet-gui.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/Fortinet-gui.md)
+* **FortiGate Verification & Packet Tracing:** [docs/vt.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/vt.md)
 
-Apply the configuration from [docs/Fortinet-cli.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/Fortinet-cli.md) on the FortiGate console:
-
-```fortios
-config firewall address
-    edit "NET_SERVERS_VLAN10"
-        set subnet 192.168.10.0 255.255.255.0
-    next
-    edit "NET_USERS_VLAN40"
-        set subnet 192.168.40.0 255.255.255.0
-    next
-    edit "HOST_ALPINE_HONEYPOT"
-        set subnet 192.168.10.2 255.255.255.255
-    next
-    edit "HOST_KALI_ATTACKER"
-        set subnet 192.168.40.3 255.255.255.255
-    next
-end
-config system interface
-    edit "port2"
-        set vdom "root"
-        set allowaccess ping https ssh http
-        set type physical
-        set description "TRUNK-Internal"
-        set alias "TRUNK"
-    next
-end
-
-config system interface
-    edit "VLAN_QC_10"
-        set vdom "root"
-        set ip 192.168.10.1 255.255.255.0
-        set allowaccess ping https ssh http
-        set alias "SERVERS"
-        set device-identification enable
-        set role lan
-        set ip-managed-by-fortiipam disable
-        set interface "port2"
-        set vlanid 10
-    next
-end
-config system interface
-    edit "VLAN_QC_40"
-        set vdom "root"
-        set ip 192.168.40.1 255.255.255.0
-        set allowaccess ping https ssh http
-        set alias "USERS"
-        set device-identification enable
-        set role lan
-        set ip-managed-by-fortiipam disable
-        set interface "port2"
-        set vlanid 40
-    next
-end
-
-config system zone
-    edit "WAN"
-        set interface "port1"
-    next
-    edit "USERS"
-        set interface "VLAN_QC_40"
-    next
-    edit "DMZ"
-        set interface "port3"
-    next
-    edit "SERVERS"
-        set interface "VLAN_QC_10"
-    next
-end
-
-config firewall vip
-    edit "SSH-TO-Honeypot"
-        set extip 172.24.66.58
-        set mappedip "192.168.10.2"
-        set extintf "any"
-        set portforward enable
-        set extport 2222
-        set mappedport 22
-    next
-    edit "HTTP-TO-Honeypot"
-        set extip 172.24.66.58
-        set mappedip "192.168.10.2"
-        set extintf "any"
-        set portforward enable
-        set extport 9001
-        set mappedport 9001
-    next
-    edit "SSH-TO-KALI"
-        set extip 172.24.66.58
-        set mappedip "192.168.40.3"
-        set extintf "any"
-        set portforward enable
-        set extport 2223
-        set mappedport 22
-    next
-    edit "VIP_COWRIE_HONEYPOT_2222"
-        set extip 192.168.40.1
-        set mappedip "192.168.10.2"
-        set extintf "any"
-        set portforward enable
-        set extport 2222
-        set mappedport 2222
-    next
-end
-
-config firewall policy
-    edit 2
-        set name "SERVERS TO WAN"
-        set srcintf "SERVERS" "USERS"
-        set dstintf "WAN"
-        set action accept
-        set srcaddr "all"
-        set dstaddr "all"
-        set schedule "always"
-        set service "ALL"
-        set logtraffic all
-        set nat enable
-    next
-    edit 3
-        set name "USERS TO SERVERS"
-        set srcintf "USERS"
-        set dstintf "SERVERS"
-        set action accept
-        set srcaddr "all"
-        set dstaddr "VIP_COWRIE_HONEYPOT_2222"
-        set schedule "always"
-        set service "ALL"
-        set logtraffic all
-    next
-    edit 4
-        set name "VIP TO INTERNAL"
-        set srcintf "WAN"
-        set dstintf "SERVERS" "USERS"
-        set action accept
-        set srcaddr "all"
-        set dstaddr "SSH-TO-Honeypot" "SSH-TO-KALI" "HTTP-TO-Honeypot"
-        set schedule "always"
-        set service "ALL"
-        set logtraffic all
-    next
-    edit 20
-        set name "OUTBOUND_HONEYPOT_WEBHOOK_TO_FGT"
-        set srcintf "SERVERS"
-        set dstintf "SERVERS"
-        set action accept
-        set srcaddr "HOST_ALPINE_HONEYPOT"
-        set dstaddr "all"
-        set schedule "always"
-        set service "HTTPS"
-        set logtraffic all
-    next
-end
-
-config system automation-trigger
-    edit "TRIG_COWRIE_QUARANTINE"
-        set event-type incoming-webhook
-    next
-end
-
-config system automation-action
-    edit "ACT_QUARANTINE_ATTACKER_IP"
-        set action-type ban-ip
-    next
-end
-
-config system automation-stitch
-    edit "STITCH_COWRIE_AUTO_QUARANTINE"
-        set status enable
-        set trigger "TRIG_COWRIE_QUARANTINE"
-        config actions
-            edit 1
-                set action "ACT_QUARANTINE_ATTACKER_IP"
-                set required enable
-            next
-        end
-    next
-end
-
-```
-
-For full GUI setup instructions, reference [docs/Fortinet-gui.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/Fortinet-gui.md).
-
-### Verification & Diagnostics (Node 1)
-
-Execute zero-trust checks on the FortiGate CLI per [docs/vt.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/vt.md):
+### Key Validation Commands (FortiGate CLI)
 
 ```fortios
-# Validate VIP state and policy attachment
-get firewall vip VIP_COWRIE_HONEYPOT_2222
-show firewall policy 10
+# View active automation stitches
+show system automation-stitch STITCH_COWRIE_AUTO_QUARANTINE
 
-# Trace packets flowing from Kali through the VIP to the honeypot
-diagnose sniffer packet any 'host 192.168.40.3 and port 2222' 4 0 l
-
-# Verify active session tracking
-diagnose sys session filter clear
-diagnose sys session filter dport 2222
-diagnose sys session list
-
-# Test automation stitch execution
-diagnose automation stitch test STITCH_COWRIE_AUTO_QUARANTINE
-
-# List all currently banned/quarantined IPs
+# Inspect the Layer 3 kernel quarantine / banned IP drop table
 diagnose user banned-ip list
 
-To delete a specific IP address from the banned list:
-diagnose user banned-ip delete src4 <IP_ADDRESS>
-
-
-
+# Clear banned IP entries during testing
+diagnose user banned-ip clear
+```
 
 ---
 
-## 3. Application & Triage Architecture
+## 3. Active Defense Tiers & Lab Orchestration
 
-The lab supports multi-tiered event processing defined in [app/app.json](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/app/app.json):
+Manage and test all three tiers of the active defense honeypot pipeline using the unified lab orchestrator:
 
-* **[Basic Setup (Tier A)](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/config-a.md):** Continuous tail of `cowrie.json` on Alpine Linux with instantaneous curl dispatch to FortiOS incoming webhook upon any failed authentication.
-* **[Medium Setup (Tier B)](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/config-b.md):** In-memory sliding window rate-limiting (3 failed attempts within 30 seconds) and immediate ban for high-risk targets (`root`, `admin`, `support`, `cisco`, `ubnt`).
-* **[Advanced Setup (Tier C)](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/config-c.md):** Full Security Fabric integration with asynchronous Syslog alerts, Mattermost/Slack ChatOps notification cards, and TTY forensic session recording extraction.
+* **Lab Management Utility:** [scripts/config-lab.sh](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/config-lab.sh)
+* **Tier A (Basic Instant Quarantine + Dozzle Web GUI):** [docs/config-a.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/config-a.md)
+* **Tier B (Stateful Triage & Velocity Rate Limiting):** [docs/config-b.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/config-b.md)
+* **Tier C (Mattermost ChatOps & TTY Forensics Archive):** [docs/config-c.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/config-c.md)
+
+### Lab Orchestrator Quick Start
+
+```sh
+cd /opt/honeypot-quarantine/scripts
+curl -fsSL [https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/config-lab.sh](https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/config-lab.sh) -o config-lab.sh
+chmod +x config-lab.sh
+
+# Deploy Config-A, Config-B, or Config-C
+./config-lab.sh setup config-a
+./config-lab.sh setup config-b
+./config-lab.sh setup config-c
+
+# Check active profile, open ports, and running OpenRC daemons
+./config-lab.sh status
+```
 
 ---
 
-## Teardown & Environment Rollback
+## 4. Teardown & Environment Rollback
 
-To decommission the honeypot or reset the environment, run the rollback script:
+To decommission containers, clean storage volumes, or reset the environment, consult [scripts/rollback.sh](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/rollback.sh):
 
 ```sh
 cd /opt/honeypot-quarantine
-curl -fsSL https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/rollback.sh -o rollback.sh
+curl -fsSL [https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/rollback.sh](https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/rollback.sh) -o rollback.sh
 chmod +x rollback.sh
 ./rollback.sh
-
 ```
-
-```
-
----
-
-### Zero-Trust Verification Steps (Execute in Chat Before Transition)
-
-Before confirming completion of Stage 6, run the following verification checks against the master documentation hub:
-
-1. **Verify Raw Setup Script Accessibility:**
-   ```sh
-   curl -I -s https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/setup.sh | head -n 5
-
-```
-
-*Expected Output:* HTTP status line showing `200 OK` or valid repository availability.
-
-2. **Verify Target Policy Show Output (FortiOS CLI):**
-```fortios
-show firewall policy 10
-get system automation-stitch STITCH_COWRIE_AUTO_QUARANTINE
-
-```
-
-
-*Expected Output:* Policy 10 and Automation Stitch configurations are output cleanly with status `enable`.
-3. **Verify Host Port Socket Readiness (Alpine CLI):**
-```sh
-ss -tuln | grep -E ':2222'
-
-```
-
-
-*Expected Output:* Active TCP listener bound on port `2222`.
-
-Inspect these validation checks. Once complete, provide the gatekeeper exit trigger:
-`"I am done with Stage 6"`
