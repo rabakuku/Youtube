@@ -100,7 +100,7 @@ mkdir -p /opt/honeypot-quarantine
 cd /opt/honeypot-quarantine
 
 # Download the deployment script directly from GitHub
-curl -fsSL [https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/setup.sh](https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/setup.sh) -o setup.sh
+curl -fsSL https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/setup.sh -o setup.sh
 
 # Mark executable and run
 chmod +x setup.sh
@@ -167,7 +167,7 @@ Manage and test all three tiers of the active defense honeypot pipeline using th
 
 ```sh
 cd /opt/honeypot-quarantine/scripts
-curl -fsSL [https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/config-lab.sh](https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/config-lab.sh) -o config-lab.sh
+curl -fsSL https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/config-lab.sh -o config-lab.sh
 chmod +x config-lab.sh
 
 # Deploy Config-A, Config-B, or Config-C
@@ -187,7 +187,7 @@ To decommission containers, clean storage volumes, or reset the environment, con
 
 ```sh
 cd /opt/honeypot-quarantine
-curl -fsSL [https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/rollback.sh](https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/rollback.sh) -o rollback.sh
+curl -fsSL https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/rollback.sh -o rollback.sh
 chmod +x rollback.sh
 ./rollback.sh
 ```
