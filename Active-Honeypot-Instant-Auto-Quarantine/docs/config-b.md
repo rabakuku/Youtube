@@ -363,5 +363,3 @@ docker ps --filter "name=triage-monitor" --filter "name=dozzle-gui"
 
 
 
-Once verified, reply with the gatekeeper exit trigger:
-`"I am done with Stage 5"`
