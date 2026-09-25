@@ -138,7 +138,7 @@ end
 
 config system automation-action
     edit "ACT_QUARANTINE_ATTACKER_IP"
-        set action-type quarantine
+        set action-type ban-ip
     next
 end
 
