@@ -82,11 +82,13 @@ To give your viewers a real-time, dark-themed visual of the attacker's brute-for
 1. Launch the Frontail container on your Docker host:
 ```sh
 docker run -d \
-  --name cowrie-log-gui \
+  --name dozzle-gui \
   --restart unless-stopped \
-  -p 9001:9001 \
-  -v /var/lib/docker/volumes/compose_cowrie-var/_data/log/cowrie:/logs:ro \
-  mthenw/frontail /logs/cowrie.json --theme dark
+  -p 9001:8080 \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  amir20/dozzle:latest \
+  --auth-provider none \
+  --no-analytics
 
 ```
 
