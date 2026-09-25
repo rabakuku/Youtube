@@ -31,6 +31,13 @@ diagnose sniffer packet any 'host 192.168.40.3 and port 2222' 4 0 l
 Packets arriving on `port2.40` with `192.168.40.3:XXXXX -> 192.168.40.1:2222` and leaving `port2.10` translated to `192.168.40.3:XXXXX -> 192.168.10.2:2222`.
 
 ---
+Please run this exact command directly in your Alpine terminal (Node 2) to manually fire the webhook with the -v (verbose) flag:
+```fortios
+curl -k -v -X POST "https://192.168.10.1:443/api/v2/monitor/system/automation-stitch/webhook/TRIG_COWRIE_QUARANTINE" \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer Qzrqk80zhscqny1NsgNmgm4dcy1zjx" \
+     -d '{"srcip":"192.168.40.3","event":"cowrie.login.failed"}'
+```
 
 ### 3. Session Table Filtering
 
