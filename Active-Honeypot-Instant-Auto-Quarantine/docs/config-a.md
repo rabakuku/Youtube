@@ -237,8 +237,10 @@ diagnose user banned-ip list
 
 ```
 
+To delete a specific IP address from the banned list:
 
-
+```fortios
+diagnose user banned-ip delete src4 <IP_ADDRESS>
 ```
 
 ---
