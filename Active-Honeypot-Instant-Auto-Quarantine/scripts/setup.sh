@@ -61,6 +61,40 @@ if [ ! -f .env ]; then
     cp .env.example .env
 fi
 
+# Prompt user for FortiGate API Token and inject into active configuration files
+printf "\n======================================================================\n"
+printf "Enter your FortiGate API Token (from 'execute api-user generate-key'):\n"
+printf "Token: "
+read -r FGT_TOKEN
+
+if [ -n "$FGT_TOKEN" ]; then
+    echo "[+] Injecting API Token into configuration files..."
+    
+    # 1. Update compose/.env
+    sed -i '/FORTIGATE_API_KEY/d' .env 2>/dev/null || true
+    echo "FORTIGATE_API_KEY=\"$FGT_TOKEN\"" >> .env
+    
+    # 2. Update app/app.json (if it exists locally)
+    if [ -f "../app/app.json" ]; then
+        sed -i "s/PASTE_API_KEY_FROM_EXECUTE_API_USER_GENERATE_KEY/$FGT_TOKEN/g" ../app/app.json 2>/dev/null || true
+    fi
+    
+    # 3. Update scripts/webhook-watcher.sh (if it exists locally)
+    if [ -f "../scripts/webhook-watcher.sh" ]; then
+        sed -i "s/PASTE_YOUR_COPIED_KEY_HERE/$FGT_TOKEN/g" ../scripts/webhook-watcher.sh 2>/dev/null || true
+    fi
+
+    # 4. Update scripts/triage_engine.py (if it exists locally)
+    if [ -f "../scripts/triage_engine.py" ]; then
+        sed -i "s/PASTE_YOUR_COPIED_KEY_HERE/$FGT_TOKEN/g" ../scripts/triage_engine.py 2>/dev/null || true
+    fi
+    
+    echo "[+] Token successfully injected."
+else
+    echo "[-] No token provided. You will need to manually add it to .env and application scripts later."
+fi
+printf "======================================================================\n\n"
+
 # Spin up Cowrie honeypot container stack
 echo "[+] Pulling Cowrie image and starting containers..."
 docker compose pull
