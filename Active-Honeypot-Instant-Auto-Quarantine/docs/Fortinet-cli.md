@@ -74,6 +74,14 @@ config firewall vip
         set extport 2222
         set mappedport 22
     next
+    edit "HTTP-TO-Mattermost"
+        set extip 172.24.66.58
+        set mappedip "192.168.10.2"
+        set extintf "any"
+        set portforward enable
+        set extport 8080
+        set mappedport 8065
+    next
     edit "HTTP-TO-Honeypot"
         set extip 172.24.66.58
         set mappedip "192.168.10.2"
@@ -139,7 +147,7 @@ config firewall policy
         set dstintf "SERVERS" "USERS"
         set action accept
         set srcaddr "all"
-        set dstaddr "SSH-TO-Honeypot" "SSH-TO-KALI" "HTTP-TO-Honeypot" "HTTP-TO-Dozzle"
+        set dstaddr "SSH-TO-Honeypot" "SSH-TO-KALI" "HTTP-TO-Honeypot" "HTTP-TO-Dozzle" "HTTP-TO-Mattermost"
         set schedule "always"
         set service "ALL"
         set logtraffic all
