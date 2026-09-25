@@ -76,12 +76,15 @@ Inspect quarantined IP addresses and clear entries during testing:
 
 ```fortios
 # List all currently banned/quarantined IPs
-diagnose user quarantine list
-
-# Remove an IP from quarantine after testing
-diagnose user quarantine delete 192.168.40.3
-
+diagnose user banned-ip list
 ```
+To delete a specific IP address from the banned list:
+
+```fortios
+diagnose user banned-ip delete src4 <IP_ADDRESS>
+```
+
+
 
 *Expected Output:*
 `192.168.40.3` listed in the kernel quarantine table with status `banned`.
