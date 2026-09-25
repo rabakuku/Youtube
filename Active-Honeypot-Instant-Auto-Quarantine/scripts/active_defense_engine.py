@@ -13,7 +13,7 @@ LOG_FILE = "/var/lib/docker/volumes/compose_cowrie-var/_data/log/cowrie/cowrie.j
 TTY_DIR = "/var/lib/docker/volumes/compose_cowrie-var/_data/lib/cowrie/tty"
 FORENSIC_DIR = "/opt/honeypot-quarantine/forensics"
 ENV_FILE = "/opt/honeypot-quarantine/compose/.env"
-FGT_URL = "[https://192.168.10.1:443/api/v2/monitor/system/automation-stitch/webhook/TRIG_COWRIE_QUARANTINE](https://192.168.10.1:443/api/v2/monitor/system/automation-stitch/webhook/TRIG_COWRIE_QUARANTINE)"
+FGT_URL = "https://192.168.10.1:443/api/v2/monitor/system/automation-stitch/webhook/TRIG_COWRIE_QUARANTINE"
 
 # Terminal Colors
 CLR_RED = "\033[1;31m"
