@@ -22,6 +22,7 @@ In FortiOS, invoking `/api/v2/monitor/system/automation-stitch/webhook/...` requ
            set netgrp read-write
            set loggrp read-write
            set fwgrp read-write
+           set secfabgrp read-write
        next
    end
 
