@@ -247,8 +247,4 @@ diagnose user banned-ip list
 1. Verify OpenRC daemon: `rc-service cowrie-watcher status`.
 2. Tail the beautiful new logs and trigger the attack: `tail -f /opt/honeypot-quarantine/scripts/watcher.log`.
 3. Check your new visual web dashboard on port `9001`.
-
-Once you have verified the GUI and the OpenRC service, reply with the gatekeeper exit trigger:
-`"I am done with Stage 5"`
-
 ```
