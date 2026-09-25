@@ -137,7 +137,6 @@ ssh -p 2222 root@127.0.0.1
 To establish the Virtual IPs, firewall policies, incoming webhook automation trigger, and Layer 3 quarantine actions on FortiOS 7.4.12:
 
 * **CLI Step-by-Step Guide:** [docs/Fortinet-cli.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/Fortinet-cli.md)
-* **GUI Step-by-Step Guide:** [docs/Fortinet-gui.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/Fortinet-gui.md)
 * **FortiGate Verification & Packet Tracing:** [docs/vt.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/vt.md)
 
 ### Key Validation Commands (FortiGate CLI)
