@@ -253,7 +253,7 @@ end
 
 config system automation-action
     edit "ACT_QUARANTINE_ATTACKER_IP"
-        set action-type quarantine
+        set action-type ban-ip
     next
 end
 
@@ -295,7 +295,7 @@ diagnose sys session list
 diagnose automation stitch test STITCH_COWRIE_AUTO_QUARANTINE
 
 # Inspect Layer 3 quarantine drop list
-diagnose user quarantine list
+diagnose user banned-ip list
 
 # Clear IP from quarantine after testing
 diagnose user quarantine delete 192.168.40.3
