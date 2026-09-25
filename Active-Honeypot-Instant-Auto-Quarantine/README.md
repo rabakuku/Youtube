@@ -294,13 +294,14 @@ diagnose sys session list
 # Test automation stitch execution
 diagnose automation stitch test STITCH_COWRIE_AUTO_QUARANTINE
 
-# Inspect Layer 3 quarantine drop list
+# List all currently banned/quarantined IPs
 diagnose user banned-ip list
 
-# Clear IP from quarantine after testing
-diagnose user quarantine delete 192.168.40.3
+To delete a specific IP address from the banned list:
+diagnose user banned-ip delete src4 <IP_ADDRESS>
 
-```
+
+
 
 ---
 
