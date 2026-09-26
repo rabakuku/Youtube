@@ -113,6 +113,37 @@ config system zone
     next
 end
 ```
+```fortios
+## Configure Firewall Address
+config system dhcp server
+    edit 2
+        set default-gateway 192.168.40.1
+        set netmask 255.255.255.0
+        set interface "VLAN_QC_40"
+        config ip-range
+            edit 1
+                set start-ip 192.168.40.3
+                set end-ip 192.168.40.254
+            next
+        end
+        set dns-server1 1.1.1.1
+        set dns-server2 8.8.8.8
+    next
+    edit 3
+        set default-gateway 192.168.10.1
+        set netmask 255.255.255.0
+        set interface "VLAN_QC_10"
+        config ip-range
+            edit 1
+                set start-ip 192.168.10.2
+                set end-ip 192.168.10.254
+            next
+        end
+        set dns-server1 1.1.1.1
+        set dns-server2 8.8.8.8
+    next
+end
+```
 
 ## Configure Firewall Address
 ```fortios
