@@ -1,0 +1,32 @@
+services:
+  cowrie:
+    image: cowrie/cowrie:latest
+    container_name: cowrie-honeypot
+    restart: unless-stopped
+    ports:
+      - "${COWRIE_LISTEN_PORT}:2222"
+    environment:
+      - COWRIE_TELNET_ENABLED=${COWRIE_TELNET_ENABLED}
+      - COWRIE_HONEYPOT_HOSTNAME=${COWRIE_HONEYPOT_HOSTNAME}
+    volumes:
+      - cowrie-etc:/cowrie/cowrie-git/etc
+      - cowrie-var:/cowrie/cowrie-git/var
+      - ./cowrie.cfg:/cowrie/cowrie-git/etc/cowrie.cfg:ro
+    networks:
+      honeypot_net:
+        ipv4_address: ${COWRIE_CONTAINER_IP}
+
+networks:
+  honeypot_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: ${DOCKER_SUBNET}
+          gateway: ${DOCKER_GATEWAY}
+
+volumes:
+  cowrie-etc:
+    driver: local
+  cowrie-var:
+    driver: local
