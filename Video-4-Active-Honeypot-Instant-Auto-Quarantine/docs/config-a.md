@@ -1,5 +1,5 @@
 ```markdown
-<!-- filepath: https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/config-a.md -->
+<!-- filepath: https://github.com/rabakuku/Youtube/tree/main/Video-4-Active-Honeypot-Instant-Auto-Quarantine/docs/config-a.md -->
 # Stage 5A: Basic Honeypot Webhook Dispatch (Enterprise Edition)
 
 This guide establishes the primary detection-to-mitigation pipeline between the Cowrie honeypot container (`192.168.10.2`) and the FortiOS Security Fabric (`192.168.10.1`). 
