@@ -1,5 +1,5 @@
 ```markdown
-<!-- filepath: https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/config-c.md -->
+<!-- filepath: https://github.com/rabakuku/Youtube/tree/main/Video-4-Active-Honeypot-Instant-Auto-Quarantine/docs/config-c.md -->
 # Stage 5C: Enterprise Active Defense Fabric (Mattermost/Slack ChatOps & TTY Forensics)
 
 This advanced architecture completes the closed-loop incident response fabric. While Tier A handles basic 1:1 triggering and Tier B introduces rate-limiting, Tier C adds automated SecOps collaboration and digital forensics extraction:
