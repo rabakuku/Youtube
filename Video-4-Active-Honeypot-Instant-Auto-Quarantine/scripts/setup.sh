@@ -1,8 +1,8 @@
 #!/bin/sh
-# filepath: https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/setup.sh
+# filepath: https://github.com/rabakuku/Youtube/tree/main/Video-4-Active-Honeypot-Instant-Auto-Quarantine/scripts/setup.sh
 set -e
 
-REPO_BASE="https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine"
+REPO_BASE="https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-4-Active-Honeypot-Instant-Auto-Quarantine"
 COMPOSE_DIR="/opt/honeypot-quarantine/compose"
 
 echo "[+] Starting Active Deception Honeypot Deployment on Alpine Linux..."
