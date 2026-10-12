@@ -8,7 +8,7 @@ To support this workflow, the three files currently in your GitHub `scripts/` di
 1. **Download and grant execution rights:**
 ```sh
 cd /opt/honeypot-quarantine/scripts
-curl -fsSL https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/config-lab.sh -o config-lab.sh
+curl -fsSL https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-4-Active-Honeypot-Instant-Auto-Quarantine/scripts/config-lab.sh -o config-lab.sh
 chmod +x config-lab.sh
 
 ```
