@@ -453,6 +453,11 @@ curl -k -i -X GET "https://192.168.10.1:443/api/v2/cmdb/firewall/address" \
 3. Click **Workflows** -> **Add Workflow** -> Click the three dots `...` (top right) -> **Import from File / Paste JSON**.
 4. Copy the complete JSON workflow definition below and paste it directly into the canvas:
 
+* **FortiOS Anomaly Webhook** (`n8n-nodes-base.webhook`): Acts as the workflow's ingestion endpoint. It listens on `POST /webhook/quarantine` (or `/webhook-test/quarantine`) to receive alert payloads pushed directly from the FortiGate automation stitch.
+* **Filter & Whitelist Check** (`n8n-nodes-base.code`): Extracts the offending source IP (`srcip`) whether the incoming alert is structured JSON or URL-encoded text. It falls back to a lab default (`192.168.10.3`) if unpopulated, drops the execution if the IP matches critical infrastructure (`192.168.10.1`, `192.168.10.2`, `127.0.0.1`), and formats the output object naming convention as `QUAR_<attacker_ip>`.
+* **Create Host Address Object** (`n8n-nodes-base.httpRequest`): Calls the FortiOS REST API CMDB endpoint (`POST /api/v2/cmdb/firewall/address`) via bearer token authentication to define a new `/32` firewall address object using the generated `QUAR_<attacker_ip>` name.
+* **Append to Quarantine Group** (`n8n-nodes-base.httpRequest`): Pushes the newly created address object into the member list of the existing firewall address group `GRP_ACTIVE_QUARANTINE` (`POST /api/v2/cmdb/firewall/addrgrp/GRP_ACTIVE_QUARANTINE/member`), enforcing the active block policy applied to that group.
+
 ```json
 {
   "name": "My workflow",
@@ -568,7 +573,41 @@ curl -k -i -X GET "https://192.168.10.1:443/api/v2/cmdb/firewall/address" \
     }
   ],
   "pinData": {},
-  "connections": {},
+  "connections": {
+    "FortiOS Anomaly Webhook": {
+      "main": [
+        [
+          {
+            "node": "Filter & Whitelist Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter & Whitelist Check": {
+      "main": [
+        [
+          {
+            "node": "Create Host Address Object",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Host Address Object": {
+      "main": [
+        [
+          {
+            "node": "Append to Quarantine Group",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
   "active": true,
   "settings": {
     "executionOrder": "v1"
