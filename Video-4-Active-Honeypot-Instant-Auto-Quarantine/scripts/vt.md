@@ -1,5 +1,5 @@
 ```markdown
-<!-- filepath: https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/vt.md -->
+<!-- filepath: https://github.com/rabakuku/Youtube/tree/main/Video-4-Active-Honeypot-Instant-Auto-Quarantine/scripts/vt.md -->
 # Verification & Diagnostics: Node 2 (Alpine Docker Host)
 
 Execute the following test sequences directly on **Node 2 (`192.168.10.2`)** to confirm that the Cowrie container is healthy, properly bound to the host network interface, and recording connection events.
