@@ -1,4 +1,4 @@
-<!-- filepath: https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/README.md -->
+<!-- filepath: https://github.com/rabakuku/Youtube/tree/main/Video-4-Active-Honeypot-Instant-Auto-Quarantine/README.md -->
 [![FortiOS](https://img.shields.io/badge/FortiOS-7.4-red.svg)](https://www.fortinet.com/)
 [![Alpine Linux](https://img.shields.io/badge/Alpine%20Linux-3.24-0D597F.svg)](https://alpinelinux.org/)
 [![Docker](https://img.shields.io/badge/Docker-Cowrie%20Honeypot-2496ED.svg)](https://hub.docker.com/r/cowrie/cowrie)
@@ -45,7 +45,7 @@ An enterprise-grade active defense deception network combining containerized Cow
 * **Node 2 (Alpine Linux 3.24 Host):** `192.168.10.2/24` (Docker Engine, Cowrie Container Bound to Host `:2222`)
 * **Node 3 (Kali Linux Attacker):** `192.168.40.3/24` (Client Subnet, Initiating Unauthorized Probes)
 
-For complete network interfaces, firewall zones, and protocol flow definitions, refer to [docs/Lab-Matrix.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/Lab-Matrix.md).
+For complete network interfaces, firewall zones, and protocol flow definitions, refer to [docs/Lab-Matrix.md](https://github.com/rabakuku/Youtube/tree/main/Video-4-Video-4-Active-Honeypot-Instant-Auto-Quarantine/docs/Lab-Matrix.md).
 
 ---
 
@@ -100,7 +100,7 @@ mkdir -p /opt/honeypot-quarantine
 cd /opt/honeypot-quarantine
 
 # Download the deployment script directly from GitHub
-curl -fsSL https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/setup.sh -o setup.sh
+curl -fsSL https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-4-Active-Honeypot-Instant-Auto-Quarantine/scripts/setup.sh -o setup.sh
 
 # Mark executable and run
 chmod +x setup.sh
@@ -114,7 +114,7 @@ Token: 8q9N4k6Y9H3pZ1r...
 
 ### Verification & Testing (Node 2)
 
-Execute host validation steps as defined in [scripts/vt.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/vt.md):
+Execute host validation steps as defined in [scripts/vt.md](https://github.com/rabakuku/Youtube/tree/main/Video-4-Video-4-Active-Honeypot-Instant-Auto-Quarantine/scripts/vt.md):
 
 ```sh
 # 1. Verify container runtime state
@@ -145,7 +145,7 @@ curl -k -v -X POST "https://192.168.10.1:443/api/v2/monitor/system/automation-st
 
 ```sh
 # Download the deployment script directly from GitHub
-curl -fsSL https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/random_ssh_brute.sh -o random_ssh_brute.sh
+curl -fsSL https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-4-Video-4-Active-Honeypot-Instant-Auto-Quarantine/scripts/random_ssh_brute.sh -o random_ssh_brute.sh
 
 # Mark executable and run
 chmod +x random_ssh_brute.sh
@@ -160,8 +160,8 @@ chmod +x random_ssh_brute.sh
 
 To establish the Virtual IPs, firewall policies, incoming webhook automation trigger, and Layer 3 quarantine actions on FortiOS 7.4.12:
 
-* **CLI Step-by-Step Guide:** [docs/Fortinet-cli.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/Fortinet-cli.md)
-* **FortiGate Verification & Packet Tracing:** [docs/vt.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/vt.md)
+* **CLI Step-by-Step Guide:** [docs/Fortinet-cli.md](https://github.com/rabakuku/Youtube/tree/main/Video-4-Video-4-Active-Honeypot-Instant-Auto-Quarantine/docs/Fortinet-cli.md)
+* **FortiGate Verification & Packet Tracing:** [docs/vt.md](https://github.com/rabakuku/Youtube/tree/main/Video-4-Video-4-Active-Honeypot-Instant-Auto-Quarantine/docs/vt.md)
 
 ### Key Validation Commands (FortiGate CLI)
 
@@ -182,16 +182,16 @@ diagnose user banned-ip clear
 
 Manage and test all three tiers of the active defense honeypot pipeline using the unified lab orchestrator:
 
-* **Lab Management Utility:** [scripts/config-lab.sh](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/config-lab.sh)
-* **Tier A (Basic Instant Quarantine + Dozzle Web GUI):** [docs/config-a.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/config-a.md)
-* **Tier B (Stateful Triage & Velocity Rate Limiting):** [docs/config-b.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/config-b.md)
-* **Tier C (Mattermost ChatOps & TTY Forensics Archive):** [docs/config-c.md](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/config-c.md)
+* **Lab Management Utility:** [scripts/config-lab.sh](https://github.com/rabakuku/Youtube/tree/main/Video-4-Active-Honeypot-Instant-Auto-Quarantine/scripts/config-lab.sh)
+* **Tier A (Basic Instant Quarantine + Dozzle Web GUI):** [docs/config-a.md](https://github.com/rabakuku/Youtube/tree/main/Video-4-Active-Honeypot-Instant-Auto-Quarantine/docs/config-a.md)
+* **Tier B (Stateful Triage & Velocity Rate Limiting):** [docs/config-b.md](https://github.com/rabakuku/Youtube/tree/main/Video-4-Active-Honeypot-Instant-Auto-Quarantine/docs/config-b.md)
+* **Tier C (Mattermost ChatOps & TTY Forensics Archive):** [docs/config-c.md](https://github.com/rabakuku/Youtube/tree/main/Video-4-Active-Honeypot-Instant-Auto-Quarantine/docs/config-c.md)
 
 ### Lab Orchestrator Quick Start
 
 ```sh
 cd /opt/honeypot-quarantine/scripts
-curl -fsSL https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/config-lab.sh -o config-lab.sh
+curl -fsSL https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-4-Active-Honeypot-Instant-Auto-Quarantine/scripts/config-lab.sh -o config-lab.sh
 chmod +x config-lab.sh
 
 # Deploy Config-A, Config-B, or Config-C
@@ -207,11 +207,11 @@ chmod +x config-lab.sh
 
 ## 4. Teardown & Environment Rollback
 
-To decommission containers, clean storage volumes, or reset the environment, consult [scripts/rollback.sh](https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/rollback.sh):
+To decommission containers, clean storage volumes, or reset the environment, consult [scripts/rollback.sh](https://github.com/rabakuku/Youtube/tree/main/Video-4-Active-Honeypot-Instant-Auto-Quarantine/scripts/rollback.sh):
 
 ```sh
 cd /opt/honeypot-quarantine
-curl -fsSL https://raw.githubusercontent.com/rabakuku/Youtube/main/Active-Honeypot-Instant-Auto-Quarantine/scripts/rollback.sh -o rollback.sh
+curl -fsSL https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-4-Active-Honeypot-Instant-Auto-Quarantine/scripts/rollback.sh -o rollback.sh
 chmod +x rollback.sh
 ./rollback.sh
 ```
