@@ -1,5 +1,5 @@
 ```markdown
-<!-- filepath: https://github.com/rabakuku/Youtube/tree/main/Active-Honeypot-Instant-Auto-Quarantine/docs/config-b.md -->
+<!-- filepath: https://github.com/rabakuku/Youtube/tree/main/Video-4-Active-Honeypot-Instant-Auto-Quarantine/docs/config-b.md -->
 # Stage 5B: Intelligent Triage Engine with Dynamic Rate Limiting & Threat Scoring
 
 While Stage 5A triggers an instant quarantine upon any failed authentication, production enterprise environments require behavioral nuance. Automated scanners or internal users mistyping credentials should not immediately lock down subnets.
