@@ -3,11 +3,6 @@
 ![Docker](https://img.shields.io/badge/Docker-Engine-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![Grafana](https://img.shields.io/badge/Grafana-10.3-F46800?style=for-the-badge&logo=grafana&logoColor=white)
 
-To finalize your Master Documentation Hub, I have removed the manual container deployment steps and streamlined both documents to leverage the automated quickstart shell script exclusively.
-
-When preparing your **Fortinet Lab in Eve-NG**, remember that you can wipe all nodes to clean up HDD space and delete saved lab configurations if you need a fresh start. Alternatively, you can open the "Startup-config" window and press the red “Config Reset” button to set the lab to boot from none. If you are collaborating with other users, you can select the lab and move it to the Shared folder, which is recommended to set "any" Cluster Satellite.
-
-Here are your final publication-ready repository documents.
 
 ```markdown
 # Fortinet Visual SOC Lab - Master Technical Manual
