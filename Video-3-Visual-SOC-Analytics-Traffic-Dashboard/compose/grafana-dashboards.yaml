@@ -1,0 +1,18 @@
+# filepath: https://github.com/rabakuku/Youtube/blob/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/compose/grafana-dashboards.yaml
+# -----------------------------------------------------------------------------
+# Grafana 10.3 dashboard provider — auto-loads every JSON in /etc/grafana/dashboards
+# Host path: compose/grafana/provisioning/dashboards/grafana-dashboards.yaml
+# -----------------------------------------------------------------------------
+apiVersion: 1
+
+providers:
+  - name: visual-soc
+    orgId: 1
+    folder: Visual SOC
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/dashboards
+      foldersFromFilesStructure: false

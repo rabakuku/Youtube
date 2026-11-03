@@ -1,513 +1,969 @@
 {
-  "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": "-- Grafana --",
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
-        "type": "dashboard"
-      }
-    ]
-  },
-  "editable": true,
-  "fiscalYearStartMonth": 0,
-  "graphTooltip": 1,
-  "liveNow": true,
-  "panels": [
+ "uid": "fortinet-visual-soc",
+ "title": "Fortinet Visual SOC — Live Wallboard",
+ "description": "FortiOS 7.4 syslog → Vector → Loki → Grafana. Zero-cost SOC lab by Deploy & Defend.",
+ "tags": [
+  "fortigate",
+  "soc",
+  "loki",
+  "vector"
+ ],
+ "timezone": "browser",
+ "editable": false,
+ "graphTooltip": 1,
+ "time": {
+  "from": "now-15m",
+  "to": "now"
+ },
+ "refresh": "5s",
+ "timepicker": {
+  "refresh_intervals": [
+   "5s",
+   "10s",
+   "30s",
+   "1m",
+   "5m"
+  ]
+ },
+ "schemaVersion": 39,
+ "version": 1,
+ "style": "dark",
+ "liveNow": false,
+ "templating": {
+  "list": []
+ },
+ "annotations": {
+  "list": []
+ },
+ "links": [],
+ "panels": [
+  {
+   "id": 1,
+   "type": "stat",
+   "title": "THREAT LEVEL",
+   "description": "Blocked events in the last 60 seconds. 0 = ALL CLEAR, 1-50 = ELEVATED, 51+ = UNDER ATTACK.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 0,
+    "y": 0
+   },
+   "targets": [
     {
-      "datasource": {
-        "type": "loki",
-        "uid": "Loki"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 50
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 8,
-        "x": 0,
-        "y": 0
-      },
-      "id": 1,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "title": "Total Log Ingest (5m)",
-      "type": "stat",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "Loki"
-          },
-          "expr": "sum(count_over_time({source=\"fortigate\"}[5m]))",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "Loki"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "super-light-red"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 8,
-        "x": 8,
-        "y": 0
-      },
-      "id": 5,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "title": "Blocked Threat Events",
-      "type": "stat",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "Loki"
-          },
-          "expr": "sum(count_over_time({source=\"fortigate\"} | json | action=\"deny\" [5m]))",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "Loki"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 8,
-        "x": 16,
-        "y": 0
-      },
-      "id": 6,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "title": "Top Source IP",
-      "type": "stat",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "Loki"
-          },
-          "expr": "topk(1, sum by (srcip) (count_over_time({source=\"fortigate\"} | json [5m])))",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "Loki"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 25,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "normal"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 4
-      },
-      "id": 2,
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "title": "Traffic Rate by Firewall Policy",
-      "type": "timeseries",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "Loki"
-          },
-          "expr": "sum by (policyname) (rate({source=\"fortigate\"} | json [1m]))",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "Loki"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 4
-      },
-      "id": 3,
-      "options": {
-        "displayMode": "gradient",
-        "minVizHeight": 16,
-        "minVizWidth": 0,
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showUnfilled": true
-      },
-      "title": "Top Attacked Services / Ports",
-      "type": "bargauge",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "Loki"
-          },
-          "expr": "topk(5, sum by (service) (count_over_time({source=\"fortigate\"} | json [15m])))",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "Loki"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 0,
-        "y": 12
-      },
-      "id": 7,
-      "options": {
-        "displayMode": "gradient",
-        "minVizHeight": 16,
-        "minVizWidth": 0,
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showUnfilled": true
-      },
-      "title": "Top Threat Sources (Attacker IPs)",
-      "type": "bargauge",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "Loki"
-          },
-          "expr": "topk(5, sum by (srcip) (count_over_time({source=\"fortigate\"} | json | action=\"deny\" [15m])))",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "Loki"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 12,
-        "y": 12
-      },
-      "id": 8,
-      "options": {
-        "displayMode": "gradient",
-        "minVizHeight": 16,
-        "minVizWidth": 0,
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showUnfilled": true
-      },
-      "title": "Top Target Destinations (Destination IPs)",
-      "type": "bargauge",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "Loki"
-          },
-          "expr": "topk(5, sum by (dstip) (count_over_time({source=\"fortigate\"} | json [15m])))",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "Loki"
-      },
-      "gridPos": {
-        "h": 10,
-        "w": 24,
-        "x": 0,
-        "y": 19
-      },
-      "id": 4,
-      "options": {
-        "dedupStrategy": "none",
-        "enableLogDetails": true,
-        "prettifyLogMessage": true,
-        "showCommonLabels": false,
-        "showLabels": true,
-        "showTime": true,
-        "sortOrder": "Descending",
-        "wrapLogMessage": true
-      },
-      "title": "Live Unified SOC Event Stream",
-      "type": "logs",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "Loki"
-          },
-          "expr": "{source=\"fortigate\"} | json",
-          "refId": "A"
-        }
-      ]
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "sum(count_over_time({source=\"fortigate\", verdict=\"blocked\"}[1m])) or vector(0)",
+     "queryType": "range",
+     "editorMode": "code"
     }
-  ],
-  "refresh": "5s",
-  "schemaVersion": 39,
-  "tags": [
-    "soc",
-    "fortinet",
-    "siem"
-  ],
-  "time": {
-    "from": "now-15m",
-    "to": "now"
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "noValue": "ALL CLEAR",
+     "decimals": 0,
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       },
+       {
+        "color": "red",
+        "value": 51
+       }
+      ]
+     },
+     "mappings": [
+      {
+       "type": "range",
+       "options": {
+        "from": 0,
+        "to": 0,
+        "result": {
+         "text": "ALL CLEAR",
+         "index": 0
+        }
+       }
+      },
+      {
+       "type": "range",
+       "options": {
+        "from": 1,
+        "to": 50,
+        "result": {
+         "text": "ELEVATED",
+         "index": 1
+        }
+       }
+      },
+      {
+       "type": "range",
+       "options": {
+        "from": 51,
+        "to": 1000000000000.0,
+        "result": {
+         "text": "UNDER ATTACK",
+         "index": 2
+        }
+       }
+      }
+     ]
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "area",
+    "justifyMode": "center",
+    "textMode": "value",
+    "orientation": "auto",
+    "wideLayout": true,
+    "showPercentChange": false
+   }
   },
-  "timepicker": {},
-  "timezone": "browser",
-  "title": "Fortinet Visual SOC",
-  "uid": "fortinet-visual-soc",
-  "version": 4
+  {
+   "id": 2,
+   "type": "stat",
+   "title": "Events (5m)",
+   "description": "Every FortiGate log received by Vector in the last 5 minutes.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 3,
+    "x": 6,
+    "y": 0
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "sum(count_over_time({source=\"fortigate\"}[5m])) or vector(0)",
+     "queryType": "range",
+     "editorMode": "code"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "noValue": "0",
+     "decimals": 0,
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "blue",
+        "value": null
+       }
+      ]
+     },
+     "mappings": []
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "area",
+    "justifyMode": "center",
+    "textMode": "value",
+    "orientation": "auto",
+    "wideLayout": true,
+    "showPercentChange": false
+   }
+  },
+  {
+   "id": 3,
+   "type": "stat",
+   "title": "Blocked (5m)",
+   "description": "Firewall denies + IPS drops/resets in the last 5 minutes.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 3,
+    "x": 9,
+    "y": 0
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "sum(count_over_time({source=\"fortigate\", verdict=\"blocked\"}[5m])) or vector(0)",
+     "queryType": "range",
+     "editorMode": "code"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "noValue": "0",
+     "decimals": 0,
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     },
+     "mappings": []
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "area",
+    "justifyMode": "center",
+    "textMode": "value",
+    "orientation": "auto",
+    "wideLayout": true,
+    "showPercentChange": false
+   }
+  },
+  {
+   "id": 4,
+   "type": "stat",
+   "title": "IPS Detections (5m)",
+   "description": "IPS signature matches (needs a licensed IPS package on the FortiGate).",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 3,
+    "x": 12,
+    "y": 0
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "sum(count_over_time({source=\"fortigate\", log_type=\"utm\"} | json | subtype=\"ips\" [5m])) or vector(0)",
+     "queryType": "range",
+     "editorMode": "code"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "noValue": "0",
+     "decimals": 0,
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       }
+      ]
+     },
+     "mappings": []
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "area",
+    "justifyMode": "center",
+    "textMode": "value",
+    "orientation": "auto",
+    "wideLayout": true,
+    "showPercentChange": false
+   }
+  },
+  {
+   "id": 5,
+   "type": "stat",
+   "title": "Attacker IPs (15m)",
+   "description": "Distinct source IPs that triggered at least one block.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 3,
+    "x": 15,
+    "y": 0
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "count(sum by (srcip) (count_over_time({source=\"fortigate\", verdict=\"blocked\"} | json [15m]))) or vector(0)",
+     "queryType": "range",
+     "editorMode": "code"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "noValue": "0",
+     "decimals": 0,
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     },
+     "mappings": []
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "area",
+    "justifyMode": "center",
+    "textMode": "value",
+    "orientation": "auto",
+    "wideLayout": true,
+    "showPercentChange": false
+   }
+  },
+  {
+   "id": 6,
+   "type": "stat",
+   "title": "Ports Probed (15m)",
+   "description": "Distinct destination ports hit by denied connections — a port scan makes this jump.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 3,
+    "x": 18,
+    "y": 0
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "count(sum by (dstport) (count_over_time({source=\"fortigate\", log_type=\"traffic\", verdict=\"blocked\"} | json [15m]))) or vector(0)",
+     "queryType": "range",
+     "editorMode": "code"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "noValue": "0",
+     "decimals": 0,
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       },
+       {
+        "color": "red",
+        "value": 20
+       }
+      ]
+     },
+     "mappings": []
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "area",
+    "justifyMode": "center",
+    "textMode": "value",
+    "orientation": "auto",
+    "wideLayout": true,
+    "showPercentChange": false
+   }
+  },
+  {
+   "id": 7,
+   "type": "stat",
+   "title": "Allowed Sessions (5m)",
+   "description": "Sessions that passed a FortiGate policy.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 3,
+    "x": 21,
+    "y": 0
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "sum(count_over_time({source=\"fortigate\", log_type=\"traffic\", verdict=\"allowed\"}[5m])) or vector(0)",
+     "queryType": "range",
+     "editorMode": "code"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "noValue": "0",
+     "decimals": 0,
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     },
+     "mappings": []
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "area",
+    "justifyMode": "center",
+    "textMode": "value",
+    "orientation": "auto",
+    "wideLayout": true,
+    "showPercentChange": false
+   }
+  },
+  {
+   "id": 8,
+   "type": "timeseries",
+   "title": "Attack Timeline — Allowed vs Blocked vs Detected",
+   "description": "Log volume per interval, split by the verdict Vector assigns.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 9,
+    "w": 16,
+    "x": 0,
+    "y": 5
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "sum by (verdict) (count_over_time({source=\"fortigate\"}[$__interval]))",
+     "queryType": "range",
+     "editorMode": "code",
+     "legendFormat": "{{verdict}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 80,
+      "lineWidth": 1,
+      "stacking": {
+       "mode": "normal",
+       "group": "A"
+      },
+      "barAlignment": 0,
+      "showPoints": "never"
+     },
+     "unit": "short",
+     "color": {
+      "mode": "palette-classic"
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "blocked"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "red"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "allowed"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "green"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "detected"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "orange"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "id": 9,
+   "type": "bargauge",
+   "title": "Top Attacker IPs (15m)",
+   "description": "Source IPs ranked by blocked events.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 9,
+    "w": 8,
+    "x": 16,
+    "y": 5
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "topk(5, sum by (srcip) (count_over_time({source=\"fortigate\", verdict=\"blocked\"} | json [15m])))",
+     "queryType": "instant",
+     "editorMode": "code",
+     "legendFormat": "{{srcip}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "min": 0,
+     "color": {
+      "mode": "fixed",
+      "fixedColor": "red"
+     },
+     "noValue": "No activity"
+    },
+    "overrides": []
+   },
+   "options": {
+    "orientation": "horizontal",
+    "displayMode": "gradient",
+    "showUnfilled": true,
+    "valueMode": "color",
+    "namePlacement": "left",
+    "sizing": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "minVizHeight": 16,
+    "maxVizHeight": 40
+   }
+  },
+  {
+   "id": 10,
+   "type": "bargauge",
+   "title": "Top Scanned Ports (15m)",
+   "description": "Destination ports most often hit by denied connections.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 10,
+    "w": 8,
+    "x": 0,
+    "y": 14
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "topk(10, sum by (dstport) (count_over_time({source=\"fortigate\", log_type=\"traffic\", verdict=\"blocked\"} | json [15m])))",
+     "queryType": "instant",
+     "editorMode": "code",
+     "legendFormat": "port {{dstport}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "min": 0,
+     "color": {
+      "mode": "fixed",
+      "fixedColor": "orange"
+     },
+     "noValue": "No activity"
+    },
+    "overrides": []
+   },
+   "options": {
+    "orientation": "horizontal",
+    "displayMode": "gradient",
+    "showUnfilled": true,
+    "valueMode": "color",
+    "namePlacement": "left",
+    "sizing": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "minVizHeight": 16,
+    "maxVizHeight": 40
+   }
+  },
+  {
+   "id": 11,
+   "type": "bargauge",
+   "title": "Top IPS Signatures (15m)",
+   "description": "Named attacks matched by the FortiGate IPS engine.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 10,
+    "w": 8,
+    "x": 8,
+    "y": 14
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "topk(10, sum by (attack) (count_over_time({source=\"fortigate\", log_type=\"utm\"} | json | subtype=\"ips\" [15m])))",
+     "queryType": "instant",
+     "editorMode": "code",
+     "legendFormat": "{{attack}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "min": 0,
+     "color": {
+      "mode": "fixed",
+      "fixedColor": "purple"
+     },
+     "noValue": "No activity"
+    },
+    "overrides": []
+   },
+   "options": {
+    "orientation": "horizontal",
+    "displayMode": "gradient",
+    "showUnfilled": true,
+    "valueMode": "color",
+    "namePlacement": "left",
+    "sizing": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "minVizHeight": 16,
+    "maxVizHeight": 40
+   }
+  },
+  {
+   "id": 12,
+   "type": "piechart",
+   "title": "Traffic by Firewall Policy (15m)",
+   "description": "Which FortiGate policy handled each logged session.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 10,
+    "w": 8,
+    "x": 16,
+    "y": 14
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "sum by (policyname) (count_over_time({source=\"fortigate\", log_type=\"traffic\"} | json | policyname!=\"\" [15m]))",
+     "queryType": "instant",
+     "editorMode": "code",
+     "legendFormat": "{{policyname}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "color": {
+      "mode": "palette-classic"
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Kali_To_Servers_Deny"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "red"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Kali_To_SOC_Web"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "green"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "pieType": "donut",
+    "displayLabels": [
+     "percent"
+    ],
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "showLegend": true,
+     "values": [
+      "value"
+     ]
+    },
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "tooltip": {
+     "mode": "single"
+    }
+   }
+  },
+  {
+   "id": 13,
+   "type": "logs",
+   "title": "Live SOC Event Stream",
+   "description": "Newest first. Red = blocked, yellow = detected, green = allowed.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 12,
+    "w": 24,
+    "x": 0,
+    "y": 24
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "{source=\"fortigate\", log_type=~\"traffic|utm\"} | json | label_format level=`{{ if eq .verdict \"blocked\" }}error{{ else if eq .verdict \"detected\" }}warning{{ else }}info{{ end }}` | line_format `{{ .verdict | upper }}  {{ .srcip }}:{{ .srcport }} → {{ .dstip }}:{{ .dstport }}  {{ .service }}  policy={{ .policyid }}{{ if .policyname }} ({{ .policyname }}){{ end }}{{ if .attack }}  IPS: {{ .attack }}{{ end }}`",
+     "queryType": "range",
+     "editorMode": "code"
+    }
+   ],
+   "options": {
+    "showTime": true,
+    "showLabels": false,
+    "showCommonLabels": false,
+    "wrapLogMessage": false,
+    "prettifyLogMessage": false,
+    "enableLogDetails": true,
+    "dedupStrategy": "none",
+    "sortOrder": "Descending"
+   }
+  }
+ ]
 }

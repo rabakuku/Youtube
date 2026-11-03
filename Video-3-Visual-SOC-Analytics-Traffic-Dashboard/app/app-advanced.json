@@ -1,0 +1,490 @@
+{
+ "uid": "visual-soc-detections",
+ "title": "Visual SOC 3 · Detections & Forensics",
+ "description": "Alert rules, scan-detector math, and attacker profiling.",
+ "tags": [
+  "fortigate",
+  "soc",
+  "loki",
+  "visual-soc"
+ ],
+ "timezone": "browser",
+ "editable": true,
+ "graphTooltip": 1,
+ "time": {
+  "from": "now-15m",
+  "to": "now"
+ },
+ "refresh": "10s",
+ "timepicker": {
+  "refresh_intervals": [
+   "5s",
+   "10s",
+   "30s",
+   "1m",
+   "5m"
+  ]
+ },
+ "schemaVersion": 39,
+ "version": 1,
+ "liveNow": false,
+ "templating": {
+  "list": []
+ },
+ "annotations": {
+  "list": [
+   {
+    "builtIn": 1,
+    "datasource": {
+     "type": "grafana",
+     "uid": "-- Grafana --"
+    },
+    "enable": true,
+    "hide": true,
+    "iconColor": "rgba(0, 211, 255, 1)",
+    "name": "Annotations & Alerts",
+    "type": "dashboard"
+   },
+   {
+    "datasource": {
+     "type": "loki",
+     "uid": "loki-fortigate"
+    },
+    "enable": true,
+    "iconColor": "red",
+    "name": "IPS events",
+    "target": {
+     "refId": "Anno",
+     "expr": "{source=\"fortigate\", log_type=\"utm\"} | json | subtype=\"ips\"",
+     "queryType": "range"
+    },
+    "textFormat": "{{attack}} from {{srcip}}",
+    "tagKeys": "action",
+    "titleFormat": "IPS"
+   }
+  ]
+ },
+ "links": [
+  {
+   "title": "Live Wallboard",
+   "type": "link",
+   "url": "/d/fortinet-visual-soc",
+   "icon": "dashboard",
+   "targetBlank": false
+  }
+ ],
+ "panels": [
+  {
+   "id": 1,
+   "type": "alertlist",
+   "title": "Detections — firing & pending",
+   "description": "Grafana alert rules from app/alert-rules.yaml.",
+   "gridPos": {
+    "h": 8,
+    "w": 10,
+    "x": 0,
+    "y": 0
+   },
+   "options": {
+    "viewMode": "list",
+    "groupMode": "default",
+    "groupBy": [],
+    "maxItems": 20,
+    "sortOrder": 1,
+    "dashboardAlerts": false,
+    "alertName": "",
+    "alertInstanceLabelFilter": "",
+    "folder": {
+     "title": "Visual SOC"
+    },
+    "stateFilter": {
+     "firing": true,
+     "pending": true,
+     "noData": false,
+     "normal": false,
+     "error": true
+    },
+    "showInstances": true
+   }
+  },
+  {
+   "id": 2,
+   "type": "stat",
+   "title": "Port-scan score (60s)",
+   "description": "Highest number of distinct denied ports from a single source in the last minute. Alert threshold: 20.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 7,
+    "x": 10,
+    "y": 0
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "max(count by (srcip) (sum by (srcip, dstport) (count_over_time({source=\"fortigate\", log_type=\"traffic\", verdict=\"blocked\"} | json [1m])))) or vector(0)",
+     "queryType": "range",
+     "editorMode": "code"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "decimals": 0,
+     "noValue": "0",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 5
+       },
+       {
+        "color": "red",
+        "value": 20
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "area",
+    "justifyMode": "center",
+    "textMode": "value",
+    "orientation": "auto",
+    "wideLayout": true,
+    "showPercentChange": false
+   }
+  },
+  {
+   "id": 3,
+   "type": "stat",
+   "title": "IPS hits (60s)",
+   "description": "Any IPS signature match fires the 'Web attack' alert.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 7,
+    "x": 17,
+    "y": 0
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "sum(count_over_time({source=\"fortigate\", log_type=\"utm\"} | json | subtype=\"ips\" [1m])) or vector(0)",
+     "queryType": "range",
+     "editorMode": "code"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "decimals": 0,
+     "noValue": "0",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "area",
+    "justifyMode": "center",
+    "textMode": "value",
+    "orientation": "auto",
+    "wideLayout": true,
+    "showPercentChange": false
+   }
+  },
+  {
+   "id": 4,
+   "type": "timeseries",
+   "title": "Scan detector — distinct denied ports per source (60s window)",
+   "description": "Crossing the red line (20) means a port scan. Red markers = IPS events (annotation).",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 9,
+    "w": 24,
+    "x": 0,
+    "y": 8
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "count by (srcip) (sum by (srcip, dstport) (count_over_time({source=\"fortigate\", log_type=\"traffic\", verdict=\"blocked\"} | json [1m])))",
+     "queryType": "range",
+     "editorMode": "code",
+     "legendFormat": "{{srcip}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 15,
+      "lineWidth": 2,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "showPoints": "never",
+      "thresholdsStyle": {
+       "mode": "line+area"
+      }
+     },
+     "unit": "short",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "transparent",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 20
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "id": 5,
+   "type": "table",
+   "title": "Attacker profile — everything each blocked source tried",
+   "description": "Forensic view: per source, which ports and signatures were blocked.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 10,
+    "w": 12,
+    "x": 0,
+    "y": 17
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "sum by (srcip, dstport, service, attack) (count_over_time({source=\"fortigate\", verdict=\"blocked\"} | json [$__range]))",
+     "queryType": "instant",
+     "editorMode": "code"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "srcip": "Source",
+       "dstport": "Port",
+       "service": "Service",
+       "attack": "IPS signature",
+       "Value #A": "Blocked",
+       "Value": "Blocked"
+      }
+     }
+    },
+    {
+     "id": "sortBy",
+     "options": {
+      "sort": [
+       {
+        "field": "Blocked",
+        "desc": true
+       }
+      ]
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "align": "auto",
+      "cellOptions": {
+       "type": "auto"
+      },
+      "filterable": true
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Blocked"
+      },
+      "properties": [
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "gauge",
+         "mode": "gradient"
+        }
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "continuous-YlRd"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false,
+     "reducer": [
+      "sum"
+     ],
+     "fields": ""
+    }
+   }
+  },
+  {
+   "id": 6,
+   "type": "bargauge",
+   "title": "Kill chain — blocked events by phase",
+   "description": "Rough MITRE-style split: recon (denied ports) vs exploitation attempts (IPS on port 80).",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 10,
+    "w": 12,
+    "x": 12,
+    "y": 17
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "sum by (phase) (count_over_time({source=\"fortigate\", verdict=\"blocked\"} | json | label_format phase=`{{ if eq .log_type \"utm\" }}3 · Exploit (IPS){{ else if eq .dstport \"80\" }}3 · Exploit (IPS){{ else }}2 · Recon (port scan){{ end }}` [$__range]))",
+     "queryType": "instant",
+     "editorMode": "code",
+     "legendFormat": "{{phase}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "min": 0,
+     "color": {
+      "mode": "fixed",
+      "fixedColor": "red"
+     },
+     "noValue": "No activity"
+    },
+    "overrides": []
+   },
+   "options": {
+    "orientation": "horizontal",
+    "displayMode": "gradient",
+    "showUnfilled": true,
+    "valueMode": "color",
+    "namePlacement": "left",
+    "sizing": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "minVizHeight": 16,
+    "maxVizHeight": 40
+   }
+  }
+ ]
+}

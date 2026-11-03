@@ -1,0 +1,171 @@
+# filepath: https://github.com/rabakuku/Youtube/blob/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/app/alert-rules.yaml
+# -----------------------------------------------------------------------------
+# Grafana 10.3 unified alerting — Visual SOC detections (provisioned, read-only)
+# Host path: compose/grafana/provisioning/alerting/alert-rules.yaml
+# Datasource: Loki uid "loki-fortigate" (compose/grafana-datasource.yaml)
+# -----------------------------------------------------------------------------
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: visual-soc-detections
+    folder: Visual SOC
+    interval: 30s
+    rules:
+      # ---------------------------------------------------------------------
+      - uid: soc-port-scan
+        title: Port scan detected
+        condition: C
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: high
+          mitre: T1046
+          source: fortigate
+        annotations:
+          summary: "Port scan from {{ $labels.srcip }}"
+          description: "{{ $labels.srcip }} hit {{ $values.B.Value }} different denied ports in 60 seconds (threshold 20)."
+          runbook_url: https://github.com/rabakuku/Youtube/blob/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/docs/config-c.md
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 60
+              to: 0
+            datasourceUid: loki-fortigate
+            model:
+              refId: A
+              datasource:
+                type: loki
+                uid: loki-fortigate
+              editorMode: code
+              queryType: instant
+              expr: 'count by (srcip) (sum by (srcip, dstport) (count_over_time({source="fortigate", log_type="traffic", verdict="blocked"} | json [1m])))'
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+              datasource:
+                type: __expr__
+                uid: __expr__
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [20]
+              datasource:
+                type: __expr__
+                uid: __expr__
+
+      # ---------------------------------------------------------------------
+      - uid: soc-ips-web-attack
+        title: Web attack blocked by IPS
+        condition: C
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: critical
+          mitre: T1190
+          source: fortigate
+        annotations:
+          summary: "IPS: {{ $labels.attack }} from {{ $labels.srcip }}"
+          description: "FortiGate IPS matched {{ $labels.attack }} {{ $values.B.Value }} time(s) in 60 seconds from {{ $labels.srcip }}."
+          runbook_url: https://github.com/rabakuku/Youtube/blob/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/docs/config-c.md
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 60
+              to: 0
+            datasourceUid: loki-fortigate
+            model:
+              refId: A
+              datasource:
+                type: loki
+                uid: loki-fortigate
+              editorMode: code
+              queryType: instant
+              expr: 'sum by (srcip, attack) (count_over_time({source="fortigate", log_type="utm"} | json | subtype="ips" [1m]))'
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+              datasource:
+                type: __expr__
+                uid: __expr__
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+              datasource:
+                type: __expr__
+                uid: __expr__
+
+      # ---------------------------------------------------------------------
+      - uid: soc-log-silence
+        title: FortiGate log feed silent
+        condition: C
+        for: 5m
+        noDataState: Alerting
+        execErrState: Error
+        labels:
+          severity: warning
+          source: fortigate
+        annotations:
+          summary: "No FortiGate logs for 5 minutes"
+          description: "Vector has stored no FortiGate logs in Loki for 5 minutes. Check syslog on the FortiGate and docker compose ps on Alpine."
+          runbook_url: https://github.com/rabakuku/Youtube/blob/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/docs/vt.md
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: loki-fortigate
+            model:
+              refId: A
+              datasource:
+                type: loki
+                uid: loki-fortigate
+              editorMode: code
+              queryType: instant
+              expr: 'sum(count_over_time({source="fortigate"}[5m]))'
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+              datasource:
+                type: __expr__
+                uid: __expr__
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [1]
+              datasource:
+                type: __expr__
+                uid: __expr__
