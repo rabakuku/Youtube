@@ -10,6 +10,8 @@
 #
 # LAB USE ONLY: the script refuses any target outside 192.168.10.0/24.
 # Only run it against systems you own or are authorised to test.
+# Kali has no internet in this lab — copy this file in through the SSH VIP:
+#   scp -P 2223 kali-attack-campaign.sh <kali-user>@172.24.66.58:~/
 # -----------------------------------------------------------------------------
 set -euo pipefail
 
@@ -30,7 +32,7 @@ while [ $# -gt 0 ]; do
     case "$1" in
         --no-pause) PAUSE=0 ;;
         --phase)    shift; ONLY="${1:-}"; [[ "$ONLY" =~ ^[123]$ ]] || die "--phase needs 1, 2 or 3" ;;
-        -h|--help)  sed -n '4,12p' "$0"; exit 0 ;;
+        -h|--help)  sed -n '4,14p' "$0"; exit 0 ;;
         *)          die "Unknown option: $1 (try --help)" ;;
     esac
     shift
@@ -41,7 +43,7 @@ done
     || die "Target ${TARGET} is outside the lab subnet ${TARGET_NET}. Refusing."
 
 for tool in nmap curl; do
-    command -v "$tool" >/dev/null 2>&1 || die "$tool not found (sudo apt install $tool)."
+    command -v "$tool" >/dev/null 2>&1 || die "$tool not found (it ships with the standard Kali image; this lab has no internet for apt)."
 done
 HAVE_NIKTO=0; command -v nikto >/dev/null 2>&1 && HAVE_NIKTO=1
 
@@ -61,7 +63,7 @@ info "Target ${TARGET} — open ${URL} on a second screen first."
 if run_phase 1; then
     banner "PHASE 1 · RECON — who is alive in ${TARGET_NET}?"
     nmap -sn -n "$TARGET_NET" || true
-    ok "Expect on the wallboard: THREAT LEVEL ELEVATED, ICMP/ARP probes denied by policy 3."
+    ok "Expect on the wallboard: THREAT LEVEL ELEVATED, probes denied by Kali_To_Servers_Deny."
     [ -n "$ONLY" ] || pause
 fi
 
@@ -71,7 +73,7 @@ if run_phase 2; then
     nmap -Pn -n -T4 --top-ports 1000 --reason "$TARGET" || true
     info "Second pass: common UDP services"
     nmap -Pn -n -sU -T4 -p 53,69,123,161,500,514,1900 "$TARGET" 2>/dev/null || true
-    ok "Expect: only 80/tcp open. UNDER ATTACK, Ports Probed spikes, 'Port scan detected' alert fires."
+    ok "Expect: only 80/tcp open. UNDER ATTACK, Ports Probed spikes, 'Port scan detected' -> ntfy approval on the admin PC."
     [ -n "$ONLY" ] || pause
 fi
 
@@ -103,10 +105,11 @@ if run_phase 3; then
         info "Nikto web scanner (60 s cap)"
         nikto -h "$URL" -maxtime 60s -nointeractive -ask no 2>/dev/null | tail -n 15 || true
     else
-        warn "nikto not installed — skipping (sudo apt install nikto)."
+        warn "nikto not found — skipping (no internet here to install it)."
     fi
     ok "Expect: IPS Detections climbs, Top IPS Signatures fills, 'Web attack blocked by IPS' alert fires."
 fi
 
 banner "CAMPAIGN COMPLETE"
 info "THREAT LEVEL drops back to ALL CLEAR about 60 s after the last blocked event."
+info "If you approved the quarantine, every request above timed out: that is SOC_Quarantine_Block at work."

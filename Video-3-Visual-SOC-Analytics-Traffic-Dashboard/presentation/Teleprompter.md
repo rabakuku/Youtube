@@ -10,18 +10,23 @@ Voiceover for `presentation/PowerPoint.html`. The text below is **identical** to
 | `[PUNCH: word]` | Stress that word (shown underlined in yellow in the pop-out prompter) |
 | `[B-ROLL: ...]` | Point at, zoom into, or cut to that part of the animated graphic |
 
-Target runtime: about 3–4 minutes of narration (~520 spoken words), before the live demo segment.
+Target runtime: about 4 minutes of narration (~560 spoken words), plus the live demo segment.
 
 ## Slide 1 — I Attacked My Own SOC
 
 I attacked my own SOC.  
 On purpose.  
-And I recorded every second of it.
+And then I quarantined myself with one click.
 
 [PAUSE]  
 On the left, a Kali box throws a real attack.  
 In the middle, a FortiGate stops it.  
 On the right, a free dashboard shows it [PUNCH: live].
+
+[B-ROLL: Point to the ntfy card]  
+Then my PC asks one question.  
+Quarantine this IP?  
+One click, and the attacker is cut off.
 
 By the end, you'll build the whole thing yourself.  
 One script. Zero license cost.
@@ -63,15 +68,17 @@ And which exploits the IPS caught.
 
 [ACTION: Advance to Slide 4]  
 Here's the lab.  
-Three machines. Two VLANs.
+Three machines. Two zones.
 
 [B-ROLL: Point to the Kali node]  
-Kali sits in VLAN forty. That's the attack zone.  
-Alpine sits in VLAN ten. That's our SIEM.
+Kali sits in USERS. That's the attack zone.  
+And it has no internet at all.  
+This is a work lab, so that's [PUNCH: enforced] and logged.
 
 [B-ROLL: Point to the FortiGate at the top]  
-Both VLANs ride one trunk into the FortiGate.  
-So every packet between them must pass a [PUNCH: policy].
+Alpine sits in SERVERS. That's our SOC.  
+Every packet between them must pass the FortiGate.  
+And my PC reaches the dashboards through VIPs.
 
 ## Slide 5 — The Data Flow
 
@@ -110,13 +117,16 @@ On the FortiGate, the rule is simple.
 One door in. Everything else denied.
 
 [B-ROLL: Point to the green port 80 lane]  
-Policy two allows HTTP to the dashboard.  
+Policy three allows HTTP to the dashboard.  
 But the IPS inspects every request.
 
 [B-ROLL: Point to the red lanes]  
-Policy three denies the rest.  
+Policy one oh one denies the rest.  
 And here's the trick. It [PUNCH: logs] every deny.  
 That's what feeds the wallboard.
+
+One oh two blocks the internet.  
+Kali can't phone home. Ever.
 
 ## Slide 8 — One Script Deploy
 
@@ -126,11 +136,11 @@ Deploying it takes one command.
 [B-ROLL: Point to the terminal]  
 The script checks you're on Alpine.  
 It installs Docker only if it's missing.  
-Then it pulls Vector, Loki and Grafana.
+Then it starts five containers.
 
-It even generates your password.  
-And it sends a test log through the whole pipeline.  
-If you see [PUNCH: self-test passed], you're live.
+It generates every secret.  
+It asks for one thing. The FortiGate API token.  
+If it says [PUNCH: LIVE], you're ready.
 
 ## Slide 9 — The Attack Campaign
 
@@ -149,7 +159,8 @@ And the IPS [PUNCH: drops] them.
 
 [PAUSE]  
 This is my own isolated lab.  
-The script refuses any other target.
+The script refuses any other target.  
+And Kali can't reach the internet anyway.
 
 ## Slide 10 — Detection Rules
 
@@ -165,18 +176,42 @@ A second rule fires on any IPS hit.
 A third warns you if the logs go quiet.  
 Both attack rules map to MITRE ATT&CK.
 
-## Slide 11 — Build It Yourself
+[PAUSE]  
+But an alert alone doesn't stop anybody.  
+So every alert goes to a responder.
+
+## Slide 11 — One-Click Quarantine
 
 [ACTION: Advance to Slide 11]  
+Now the best part. The response.
+
+[B-ROLL: Point to the red notification]  
+The alert lands on my PC through ntfy.  
+It asks one question. Quarantine this IP?  
+I click [PUNCH: quarantine].
+
+[B-ROLL: Point to the FortiGate box]  
+A small Python responder calls the FortiGate API.  
+It drops Kali into a quarantine group.  
+The top policy now denies everything it tries.
+
+[B-ROLL: Point to the green release card]  
+Fifteen minutes later, it's released automatically.  
+And I get one more alert telling me so.
+
+## Slide 12 — Build It Yourself
+
+[ACTION: Advance to Slide 12]  
 Everything is on GitHub.  
 The link is in the description.
 
-Scripts. Configs. Dashboards. Alert rules.  
-And the attack campaign.
+The setup script. The FortiGate config. The dashboards.  
+The responder. And the attack campaign.
 
 [PAUSE]  
-Next time, we close the loop.  
-The FortiGate will [PUNCH: quarantine] the attacker automatically.
+Next time, we set a trap.  
+A honeypot that nobody should ever touch.  
+Touch it once, and you're [PUNCH: quarantined].
 
 Subscribe so you don't miss it.  
 And go break your own lab. Safely.

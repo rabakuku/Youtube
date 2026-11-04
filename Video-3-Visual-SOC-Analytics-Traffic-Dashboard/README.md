@@ -1,7 +1,7 @@
 <!-- filepath: https://github.com/rabakuku/Youtube/blob/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/README.md -->
-# 🛡️ I Attacked My Own SOC — Zero-Cost FortiGate SIEM Wallboard
+# 🛡️ I Attacked My Own SOC — and Quarantined Myself with One Click
 
-**Launch a real attack from Kali, watch the FortiGate block it, and see every blocked packet light up a live SOC wallboard seconds later — built from free tools: Vector, Loki and Grafana on Alpine Linux.**
+**Kali attacks, the FortiGate blocks, a free Grafana SOC detects it, and an alert on your PC asks "Quarantine 192.168.40.3 for 15 minutes?" — one click and the attacker is cut off. Vector + Loki + Grafana + ntfy on Alpine, zero license cost.**
 
 ![FortiOS](https://img.shields.io/badge/FortiOS-7.4.12-EE2737?style=for-the-badge&logo=fortinet&logoColor=white)
 ![Alpine](https://img.shields.io/badge/Alpine_Linux-3.24-0D597F?style=for-the-badge&logo=alpine-linux&logoColor=white)
@@ -9,7 +9,8 @@
 ![Grafana](https://img.shields.io/badge/Grafana-10.3.3-F46800?style=for-the-badge&logo=grafana&logoColor=white)
 ![Loki](https://img.shields.io/badge/Loki-2.9.4-F5A800?style=for-the-badge&logo=grafana&logoColor=white)
 ![Vector](https://img.shields.io/badge/Vector-0.36.0-6B4FBB?style=for-the-badge)
-![Kali](https://img.shields.io/badge/Kali_Linux-Attacker-557C94?style=for-the-badge&logo=kalilinux&logoColor=white)
+![ntfy](https://img.shields.io/badge/ntfy-2.11.0-317F6F?style=for-the-badge)
+![Python](https://img.shields.io/badge/Responder-Python_3.12_stdlib-3776AB?style=for-the-badge&logo=python&logoColor=white)
 
 > 🎬 **Watch the build:** _video link coming soon_ · 📺 Channel: **Deploy & Defend**
 
@@ -20,32 +21,34 @@
 1. [What you will build](#1-what-you-will-build)
 2. [Topology](#2-topology)
 3. [Prerequisites](#3-prerequisites)
-4. [Deploy the SIEM on Alpine](#4-deploy-the-siem-on-alpine)
+4. [Deploy the SOC on Alpine](#4-deploy-the-soc-on-alpine)
 5. [Configure & verify the FortiGate](#5-configure--verify-the-fortigate)
-6. [Dashboards, attack campaign & detections](#6-dashboards-attack-campaign--detections)
-7. [Rollback](#7-rollback)
-8. [Repository structure](#8-repository-structure)
-9. [Troubleshooting quick links](#9-troubleshooting-quick-links)
-10. [Credits & license](#10-credits--license)
+6. [Run the demo: detect → approve → quarantine](#6-run-the-demo-detect--approve--quarantine)
+7. [The responder](#7-the-responder)
+8. [Rollback](#8-rollback)
+9. [Upgrading an existing install](#9-upgrading-an-existing-install)
+10. [Repository structure](#10-repository-structure)
+11. [Troubleshooting quick links](#11-troubleshooting-quick-links)
+12. [Credits & license](#12-credits--license)
 
 ---
 
 ## 1. What you will build
 
-| You do this on Kali | The FortiGate does this | The wallboard shows this |
+| Kali does | FortiGate (FGTQC01) does | Your PC shows |
 |---|---|---|
-| `nmap` sweep + 1,000-port scan | Explicit **deny policy** blocks and logs every probe | THREAT LEVEL → **UNDER ATTACK**, scanned ports ranked live |
-| SQLi, path traversal, Log4Shell, Shellshock, Nikto on port 80 | **IPS** inspects the only allowed port and drops the payloads | Named IPS signatures, red event stream, alert fires |
-| Stop the attack | — | Back to **ALL CLEAR** about 60 s later |
-
-Everything is free and open source on the SIEM side: **FortiGate syslog → Vector (parser) → Loki (log store) → Grafana (wallboard + alerts)**, deployed with one script.
+| `nmap` sweep + 1,000-port scan | Logged **deny** on everything except HTTP to the dashboard | THREAT LEVEL **UNDER ATTACK**, scanned ports ranked live |
+| — | Grafana rule *Port scan detected* fires (MITRE T1046) | ntfy alert: **[Quarantine 15 minutes] [Ignore] [Wallboard]** |
+| — | You click **Quarantine** → REST API adds `Q-192.168.40.3` to `SOC-Quarantine` | "192.168.40.3 **quarantined for 15 minutes**" + **[Release now]** |
+| SQLi, traversal, Log4Shell, Nikto on port 80 | Top policy **SOC_Quarantine_Block** drops every new connection | Every request times out; wallboard **QUARANTINED 1**, purple markers |
+| — | Timer ends (or Release now) → member removed | "192.168.40.3 **released**" |
 
 **Highlights**
 
-- Auto-provisioned **Live Wallboard** with a THREAT LEVEL tile, attack timeline, top attackers, top scanned ports, top IPS signatures and a color-coded event stream.
-- Vector tags every FortiOS log as **blocked / detected / allowed**, so firewall denies and IPS drops are counted the same way.
-- Three extra dashboards (Quickstart, Threat Hunting, Detections & Forensics) and **three alert rules** mapped to MITRE ATT&CK (T1046 port scan, T1190 web exploit, plus log-feed health).
-- A scripted, lab-guarded **Kali attack campaign** made for live demos.
+- Auto-provisioned **Live Wallboard** and **Detections & Response** dashboard — threat level, timeline, top attackers/ports/IPS signatures, kill chain, quarantine status and a responder audit trail.
+- Vector tags every FortiOS log **blocked / detected / allowed**; three Grafana rules (port scan, IPS web attack, silent log feed).
+- A ~550-line Python **responder** (standard library only): approval buttons or automatic mode, signed one-time links, allowlist, timers, restart-safe, least-privilege FortiGate API token.
+- **Kali never reaches WAN** (work-lab rule): an explicit logged deny, and scripts arrive by `scp` through an SSH VIP.
 
 ---
 
@@ -53,47 +56,65 @@ Everything is free and open source on the SIEM side: **FortiGate syslog → Vect
 
 ```mermaid
 flowchart TB
-    subgraph V40["VLAN 40 — Attack Zone 192.168.40.0/24"]
-        KALI["Kali Linux<br/>192.168.40.3<br/>nmap · nikto · curl payloads"]
+    PC["Admin PC<br/>wallboard · ntfy · buttons"]
+    subgraph FGT["FGTQC01 — FortiOS 7.4.12"]
+        WAN["port1 · zone WAN<br/>VIPs 172.24.66.52 :8080 :8090 :8091<br/>172.24.66.58 :2222 :2223"]
+        QB["100 SOC_Quarantine_Block"]
+        POL["zone policies · IPS · syslog"]
+        TR["port2 TRUNK<br/>VLAN_QC_10 .10.1 · VLAN_QC_40 .40.1"]
     end
-    subgraph FGT["FortiGate VM — FortiOS 7.4.12"]
-        P2["port2 (802.1Q trunk)<br/>vlan40-kali 192.168.40.1<br/>vlan10-siem 192.168.10.1"]
-        POL["Policies 1-4 · IPS sensor<br/>logtraffic all"]
-        P1["port1 — WAN"]
+    subgraph USERS["zone USERS — 192.168.40.0/24"]
+        KALI["Kali 192.168.40.3"]
     end
-    subgraph V10["VLAN 10 — SIEM Enclave 192.168.10.0/24"]
-        ALP["Alpine Linux 3.24 · Docker<br/>192.168.10.2"]
-        subgraph NET["soc_net bridge"]
+    subgraph SERVERS["zone SERVERS — 192.168.10.0/24"]
+        subgraph ALP["Alpine 3.24 · Docker · 192.168.10.2 · soc_net 10.89.0.0/24"]
             VEC["Vector :514/udp"]
             LOKI["Loki :3100"]
-            GRAF["Grafana :80 → 3000"]
+            GRAF["Grafana :80"]
+            RESP["Responder :8091"]
+            NTFY["ntfy :8090"]
         end
     end
-    KALI -- "attack traffic" --> P2
-    P2 --- POL
-    POL -- "HTTP :80 allowed + IPS" --> GRAF
+    PC -- "HTTP via VIPs" --> WAN
+    WAN --> GRAF
+    WAN --> NTFY
+    WAN --> RESP
+    KALI -- "attacks" --> TR
+    TR --- POL
+    POL -- "HTTP :80 + IPS" --> GRAF
     POL -. "syslog UDP 514" .-> VEC
-    VEC -- "push logs" --> LOKI
+    VEC --> LOKI
     GRAF -- "LogQL" --> LOKI
-    POL --- P1
-    ALP --- NET
+    GRAF -- "alert webhook" --> RESP
+    RESP -- "notify / buttons" --> NTFY
+    RESP -- "REST API add/remove Q-ip" --> QB
+    QB -. "denies every new connection" .-> KALI
 ```
 
-| Node | Hostname | IP / Mask | Gateway | VLAN | Role |
-|---|---|---|---|---|---|
-| 1a | FortiGate-VM | 192.168.10.1/24 | — | 10 (`vlan10-siem` on port2) | SIEM-side gateway, syslog source |
-| 1b | FortiGate-VM | 192.168.40.1/24 | — | 40 (`vlan40-kali` on port2) | Attacker-side gateway, inspection point |
-| 2 | soc-alpine | 192.168.10.2/24 | 192.168.10.1 | 10 | Docker host: Vector, Loki, Grafana |
-| 3 | kali | 192.168.40.3/24 | 192.168.40.1 | 40 | Attacker + dashboard viewer |
-
-| Policy | From → To | Action | Why |
+| Node | IP | Zone / Interface | Role |
 |---|---|---|---|
-| 1 `Kali_To_Internet` | vlan40-kali → port1 | accept + NAT | Tool updates only |
-| 2 `Kali_To_SOC_Web` | vlan40-kali → SOC-Host:80 | accept + **IPS** | The only door into VLAN 10 — and it is inspected |
-| 3 `Kali_To_Servers_Deny` | vlan40-kali → vlan10-siem | **deny + log** | Feeds the wallboard (the implicit deny does not log) |
-| 4 `SOC_To_Internet` | vlan10-siem → port1 | accept + NAT | apk + container image pulls |
+| FGTQC01 | 192.168.10.1 · 192.168.40.1 · 172.24.66.52 (+ .58) | SERVERS VLAN_QC_10 · USERS VLAN_QC_40 · WAN port1 | Gateway, IPS, syslog, VIPs, REST API, quarantine |
+| soc-alpine | 192.168.10.2 | SERVERS | Docker: Vector, Loki, Grafana, ntfy, responder |
+| kali | 192.168.40.3 | USERS | Attacker — no WAN access |
+| admin PC | home LAN | outside the lab | Wallboard, ntfy, Approve/Release |
 
-Full design, port schema, event sequence and trust boundaries: **[docs/Lab-Matrix.md](docs/Lab-Matrix.md)**
+| Admin PC URL | VIP → inside |
+|---|---|
+| `http://172.24.66.52:8080` — Grafana | HTTP-TO-Grafana → 192.168.10.2:80 |
+| `http://172.24.66.52:8090/<NTFY_TOPIC>` — ntfy | NTFY-TO-SOC → 192.168.10.2:8090 |
+| `http://172.24.66.52:8091` — responder buttons | RESPONDER-TO-SOC → 192.168.10.2:8091 |
+| `ssh -p 2223 <user>@172.24.66.58` — Kali | SSH-TO-KALI → 192.168.40.3:22 |
+
+| Order | Policy | From → To | Action |
+|---|---|---|---|
+| 1 | **100 SOC_Quarantine_Block** | any → any, source `SOC-Quarantine` | deny + log |
+| 2 | 2 SERVERS TO WAN | SERVERS → WAN | accept + NAT (Alpine updates) |
+| 3 | 3 **Kali_To_SOC_Web** | USERS → SERVERS, HTTP to SOC-Host | accept + **IPS** |
+| 4 | **101 Kali_To_Servers_Deny** | USERS → SERVERS | deny + log |
+| 5 | 4 VIP TO INTERNAL | WAN → SERVERS/USERS (VIPs) | accept |
+| 6 | **102 Kali_To_WAN_Deny** | USERS → WAN | deny + log |
+
+Full design, flows, event sequence and trust boundaries: **[docs/Lab-Matrix.md](docs/Lab-Matrix.md)**
 
 ---
 
@@ -101,17 +122,17 @@ Full design, port schema, event sequence and trust boundaries: **[docs/Lab-Matri
 
 | Item | Requirement |
 |---|---|
-| Hypervisor | EVE-NG, GNS3, Proxmox, VMware… anything that can trunk VLAN 10 and 40 to FortiGate port2 |
-| FortiGate | FortiGate VM on **FortiOS 7.4.x** (tested target 7.4.12), VDOMs disabled. IPS part of the demo needs IPS signatures (bundled firmware signatures usually suffice) |
-| SIEM host | **Alpine Linux 3.24**, 2 vCPU, 2 GB RAM, 10 GB disk, root shell, static IP 192.168.10.2/24, gateway 192.168.10.1 |
-| Attacker | **Kali Linux**, 192.168.40.3/24, gateway 192.168.40.1, `nmap`, `curl` (`nikto` optional) |
-| Internet | Alpine needs outbound HTTPS/DNS for `apk`, Docker Hub and GitHub raw (FortiGate policy 4) |
+| FortiGate | FortiOS **7.4.x** (tested target 7.4.12), zone-based policies, VDOMs disabled. IPS signatures for the web-attack part (bundled firmware signatures usually suffice) |
+| SOC host | **Alpine Linux 3.24**, 2 vCPU, 2 GB RAM, 10 GB disk, root, **192.168.10.2** (DHCP reservation), outbound HTTPS/DNS via `SERVERS TO WAN` |
+| Attacker | **Kali Linux 192.168.40.3** (DHCP reservation), standard image (`nmap`, `curl`, `nikto`) — **no internet** |
+| Admin PC | Reaches 172.24.66.52/.58 (FortiGate port1); modern browser for Grafana and the ntfy web app |
+| Upstream | 172.24.66.52 reserved for the FortiGate port1 MAC (port1 is DHCP and carries the VIPs) |
 
-> ⚠️ **Lab use only.** Only attack systems you own or are authorised to test. The campaign script refuses targets outside 192.168.10.0/24.
+> ⚠️ **Lab use only.** Attack only systems you own or are authorised to test. The campaign script refuses targets outside 192.168.10.0/24.
 
 ---
 
-## 4. Deploy the SIEM on Alpine
+## 4. Deploy the SOC on Alpine
 
 Run as **root** on **192.168.10.2**:
 
@@ -122,87 +143,78 @@ chmod +x setup.sh
 ./setup.sh
 ```
 
-**What `setup.sh` does:** checks it is Alpine + root → installs only missing tools (`curl`, `docker`, `docker-cli-compose`) and enables Docker in OpenRC → downloads the 7 stack files plus `rollback.sh` → creates `compose/.env` and **generates a random Grafana admin password** → checks ports 80/TCP and 514/UDP are free → pulls pinned images → waits until all three containers are healthy → sends a test syslog line through Vector into Loki → prints the URL and login.
+**What `setup.sh` does:** checks Alpine + root → installs only missing tools (`curl`, `docker`, `docker-cli-compose`) → downloads the stack, dashboards, alert rules, contact point and responder → creates or upgrades `compose/.env` and **generates** the Grafana password, ntfy topic and button-signing secret → asks once for the **FortiGate API token** (Enter = dry-run) and tests it → checks ports 80, 514, 8090, 8091 → raises the UDP buffer for syslog bursts → pulls pinned images → waits for 5 healthy containers → self-tests syslog → Loki, the responder and ntfy → prints the URLs, the ntfy subscribe link and the login.
 
-**The `.env` file** (`compose/.env`) needs no editing for the lab. To change something (password, retention, anonymous kiosk viewer), edit it and re-run:
+| Option | Use |
+|---|---|
+| `--fgt-token KEY` | Store the FortiGate API key from [Fortinet-cli.md step 8](docs/Fortinet-cli.md#8-rest-api-admin-for-the-responder) |
+| `--dry-run` | Remove the token: notifications, buttons and timers work, the FortiGate is never changed |
+| `--no-prompt` | Never ask (automatic under `curl \| sh`) |
 
-```sh
-vi /opt/visual-soc-analytics-traffic-dashboard/compose/.env
-./setup.sh        # safe to re-run: keeps .env and data, refreshes configs
-```
+**`compose/.env`** (mode 600, never committed) — edit, then re-run `./setup.sh`:
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `GRAFANA_ADMIN_PASSWORD` | generated by setup.sh | Grafana `admin` login (set before the first start; later changes need `grafana cli admin reset-admin-password`) |
-| `GRAFANA_ANONYMOUS_VIEWER` | `false` | `true` = read-only wallboard without login (second-screen kiosk) |
-| `LOKI_RETENTION_PERIOD` | `168h` | How long logs are kept |
-| `VECTOR_LOG` | `info` | `debug` shows lines Vector could not parse |
-| `*_IMAGE` | pinned tags | Vector 0.36.0, Loki 2.9.4, Grafana 10.3.3 |
+| `PUBLIC_GRAFANA_URL` · `PUBLIC_NTFY_URL` · `PUBLIC_RESPONDER_URL` | `http://172.24.66.52:8080/8090/8091` | How the admin PC reaches the lab (used in alert links and buttons) |
+| `QUARANTINE_MODE` | `approve` | `approve` = buttons · `auto` = quarantine at once |
+| `QUARANTINE_MINUTES` | `15` | Ban length |
+| `QUARANTINE_ALLOWLIST` | `192.168.10.0/24,192.168.40.1/32,172.24.66.0/24` | Never quarantined |
+| `FGT_API_TOKEN` | empty | Empty = dry-run |
+| `NTFY_TOPIC` · `RESPONDER_SECRET` · `GRAFANA_ADMIN_PASSWORD` | generated | Topic name, link signing, Grafana login |
+| `LOKI_RETENTION_PERIOD` | `168h` | Log retention |
 
-**Verify** (full guide: **[scripts/vt.md](scripts/vt.md)**):
+**Verify** (details: **[scripts/vt.md](scripts/vt.md)**):
 
 ```sh
 cd /opt/visual-soc-analytics-traffic-dashboard/compose
-docker compose ps                                  # 3 containers "(healthy)"
-netstat -tulpn | grep -E ':(80|514|3100)\b'        # 0.0.0.0:80 tcp · 0.0.0.0:514 udp · 127.0.0.1:3100 tcp
-curl -I http://127.0.0.1                           # HTTP/1.1 302 Found → /login
-curl -s http://127.0.0.1:3100/ready                # ready
-curl -s http://127.0.0.1:3100/loki/api/v1/labels   # action, log_type, source, verdict
+docker compose ps                                                     # 5 containers (healthy)
+netstat -tulpn | grep -E ':(80|514|3100|8090|8091)\b'                 # 3100 on 127.0.0.1 only; no 8092
+curl -s http://127.0.0.1:8091/health                                  # "ok": true, "dry_run": false after Stage 4
+docker network inspect soc_net --format '{{range .IPAM.Config}}{{.Subnet}}{{end}}'   # 10.89.0.0/24
 ```
 
 ---
 
 ## 5. Configure & verify the FortiGate
 
-Paste **[docs/Fortinet-cli.md](docs/Fortinet-cli.md)** block by block (GUI click-path version: **[docs/Fortinet-gui.md](docs/Fortinet-gui.md)**). In order, it configures:
+Paste **[docs/Fortinet-cli.md](docs/Fortinet-cli.md)** in order (GUI version: **[docs/Fortinet-gui.md](docs/Fortinet-gui.md)**). Existing policies 2–4 are kept; new ones use IDs 100–102:
 
-1. **IPS package check** — `diagnose autoupdate versions`
-2. **VLAN sub-interfaces** `vlan10-siem` / `vlan40-kali` on port2 (attack zone allows ping only — no admin access from Kali)
-3. **Address objects** `SOC-Host`, `Kali-Attacker`, `NET-VLAN10-SIEM`, `NET-VLAN40-KALI`
-4. **IPS sensor** `SOC-Demo-IPS` — block + log low→critical signatures (lab setting)
-5. **Firewall policies 1–4** (table in section 2) — policy 2 must sit **above** policy 3
-6. **Syslog** to 192.168.10.2 UDP 514, default key=value format, source-ip 192.168.10.1
-7. **Smoke test** — `diagnose log test`
+0. **Back up**, check VDOM mode, IPS package and `firewall-session-dirty check-all`
+1. **DHCP reservations** for 192.168.10.2 and 192.168.40.3
+2. **Admin access:** VLAN_QC_10 `ping https ssh`, VLAN_QC_40 `ping` only
+3. **Objects:** `SOC-Host`, `Kali-Attacker`, group `SOC-Quarantine` (member `none`)
+4. **IPS sensor** `SOC-Demo-IPS`
+5. **VIPs** `NTFY-TO-SOC` :8090 and `RESPONDER-TO-SOC` :8091, appended to `VIP TO INTERNAL` (optional: source locked to `ADMIN-PC`)
+6. **Policies:** policy 3 narrowed to HTTP → `Kali_To_SOC_Web`; new **100** quarantine (moved to top), **101** USERS→SERVERS deny, **102** USERS→WAN deny
+7. **Syslog** to 192.168.10.2 UDP 514
+8. **REST API admin** `soc-responder` (profile: firewall address read-write only, trusthost 192.168.10.2) → `./setup.sh --fgt-token <KEY>`
+9. **Scripts onto Kali** via `scp -P 2223`
+10. **Smoke test** `diagnose log test`
 
-**Key checks** (full guide with expected output and a symptom → fix table: **[docs/vt.md](docs/vt.md)**):
+**Key checks** (full guide with expected output: **[docs/vt.md](docs/vt.md)**):
 
 ```text
-show firewall policy | grep -E "edit|set name"           # order 1, 2, 3, 4
-get log syslogd setting                                  # status enable · server 192.168.10.2 · port 514
-diagnose sniffer packet any 'udp and port 514' 4 10 l    # syslog leaving toward 192.168.10.2.514
-diagnose sys session filter daddr 192.168.10.2
-diagnose sys session list                                # policy_id=2 for Kali → :80
-diagnose debug flow filter addr 192.168.40.3             # + trace start / debug enable
-                                                         # → "Denied by forward policy check (policy 3)"
+show firewall policy | grep -E "^    edit|set name"     # 100, 2, 3, 101, 4, 102
+show firewall addrgrp SOC-Quarantine                    # member "none"
+get log syslogd setting                                 # server 192.168.10.2 port 514
+diagnose debug flow filter saddr 192.168.40.3           # + trace start / debug enable
+                                                        # → policy 101 (scan), 102 (WAN), 100 (quarantined)
 ```
 
-From Kali: `curl -I http://192.168.10.2` → `302 Found`; `nmap -Pn -p 22,443,3100,3389 192.168.10.2` → all `filtered`.
+From Kali: `curl -sI http://192.168.10.2` → `302`; `nmap -Pn -p 22,443,3100 192.168.10.2` → filtered; `curl -m 5 http://1.1.1.1` → timeout (policy 102).
 
 ---
 
-## 6. Dashboards, attack campaign & detections
+## 6. Run the demo: detect → approve → quarantine
 
-### A · Basic — first login & the wallboard → [docs/config-a.md](docs/config-a.md)
+Full walkthrough, dashboard guide and common mistakes: **[docs/config.md](docs/config.md)**
 
-1. On Kali open **http://192.168.10.2**, log in as `admin` with the password `setup.sh` printed (`grep GRAFANA_ADMIN_PASSWORD compose/.env` on Alpine).
-2. You land on **Fortinet Visual SOC — Live Wallboard**. Press `d` then `k` for kiosk mode.
-3. Add the teaching dashboard *Visual SOC 1 · Quickstart* (one `curl`, no restart) and try the four LogQL building blocks in Explore.
-4. Prove the chain: `diagnose log test` on the FortiGate → **Events (5m)** moves; `curl -m 3 telnet://192.168.10.2:22` on Kali → **Blocked** ≥ 1, THREAT LEVEL **ELEVATED**.
-
-### B · Medium — run the attack and hunt it → [docs/config-b.md](docs/config-b.md)
-
-```sh
-# on Kali
-curl -fsSLO https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/scripts/kali-attack-campaign.sh
-chmod +x kali-attack-campaign.sh
-sudo ./kali-attack-campaign.sh            # --no-pause, --phase 1|2|3
-```
-
-Phase 1 recon → phase 2 port scan → phase 3 web attacks, with pauses to narrate. Then investigate in *Visual SOC 2 · Threat Hunting* (filters for verdict, source IP, port; conversations, bandwidth hogs, IPS hits).
-
-### C · Advanced — detection rules & forensics → [docs/config-c.md](docs/config-c.md)
-
-Provisioned Grafana alert rules + *Visual SOC 3 · Detections & Forensics* dashboard:
+1. On the PC open the wallboard (`:8080`) and ntfy (`:8090/<NTFY_TOPIC>` → **Subscribe**, allow notifications).
+2. Copy the campaign to Kali: `scp -P 2223 Video-3-Visual-SOC-Analytics-Traffic-Dashboard/scripts/kali-attack-campaign.sh <user>@172.24.66.58:~/`
+3. On Kali: `sudo ./kali-attack-campaign.sh` — phase 1 recon, phase 2 port scan.
+4. Within ~60 s: ntfy **Port scan detected: 192.168.40.3** → click **Quarantine 15 minutes**.
+5. Phase 3 web attacks all time out; wallboard **QUARANTINED 1**, `policy=100 (SOC_Quarantine_Block)` in the stream, **Response Actions** shows the decision.
+6. **Release now** (or wait) → ntfy **released**; investigate in **Visual SOC · Detections & Response** (kill chain, attacker profile, conversations).
 
 | Rule | Fires when | MITRE |
 |---|---|---|
@@ -210,25 +222,34 @@ Provisioned Grafana alert rules + *Visual SOC 3 · Detections & Forensics* dashb
 | Web attack blocked by IPS | any IPS signature match | T1190 |
 | FortiGate log feed silent | no logs for 5 minutes | — |
 
-Optional: deliver alerts to Discord / Slack / Teams via a Grafana contact point.
-
-**Install all three dashboards and the alert rules at once** (on Alpine):
-
-```sh
-cd /opt/visual-soc-analytics-traffic-dashboard/compose
-B=https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/app
-for f in app-basic.json app-medium.json app-advanced.json; do curl -fsSL "$B/$f" -o "grafana/dashboards/$f"; done
-mkdir -p grafana/provisioning/alerting && curl -fsSL "$B/alert-rules.yaml" -o grafana/provisioning/alerting/alert-rules.yaml
-chmod -R a+r grafana && docker compose restart grafana
-```
-
-**Verify:** *Dashboards → Visual SOC* lists 4 dashboards; *Alerting → Alert rules* shows 3 provisioned rules in state *Normal*; during the campaign both detection rules go to *Firing*, then back to *Normal* 1–2 minutes after it ends.
+**Verify:** during the quarantine `show firewall addrgrp SOC-Quarantine` lists `Q-192.168.40.3`; after release it is back to `"none"` and Kali's `curl -sI http://192.168.10.2` returns `302` again.
 
 ---
 
-## 7. Rollback
+## 7. The responder
 
-`setup.sh` places `rollback.sh` in `/opt/visual-soc-analytics-traffic-dashboard/`:
+`app/responder/responder.py` — Python standard library only, mounted into `python:3.12.7-alpine3.20`.
+
+| Port | Reachable from | Endpoints |
+|---|---|---|
+| 8092 | **only inside soc_net** (not published) | `POST /grafana` (Grafana webhook) · `POST /release-all` · `GET /health` |
+| 8091 | VIP 172.24.66.52:8091 | `GET\|POST /a/<signed-token>` (buttons) · `GET /health` |
+
+**Safety rails:** allowlist (SOC VLAN, USERS gateway, admin side) · one active ban per IP and no duplicate approvals · HMAC-signed links that expire (30 min) and work once · GET only shows a confirm page, the action needs POST · automatic expiry + **Release now** · state persisted, orphaned `Q-*` objects adopted and released after restarts · "Quarantine FAILED" alert instead of fake success · every action audited to Loki (`{source="responder"}`) · **dry-run** without a token · FortiGate token only in the responder container, profile limited to address objects (`403` on policies).
+
+Test without attacking anything (on Alpine):
+
+```sh
+docker exec soc-responder wget -q -O- --header 'Content-Type: application/json' --post-data \
+ '{"alerts":[{"status":"firing","labels":{"alertname":"Port scan detected","srcip":"192.168.40.3","severity":"high"},"annotations":{"description":"Manual test alert"}}]}' \
+ http://127.0.0.1:8092/grafana
+```
+
+---
+
+## 8. Rollback
+
+**Alpine** — `setup.sh` places `rollback.sh` in `/opt/visual-soc-analytics-traffic-dashboard/`. It **releases every active quarantine first**, so Kali is never left banned.
 
 ```sh
 cd /opt/visual-soc-analytics-traffic-dashboard
@@ -239,73 +260,83 @@ cd /opt/visual-soc-analytics-traffic-dashboard
 
 | Option | Removes |
 |---|---|
-| `--containers` | Containers (logs + dashboards kept) |
-| `--volumes` | Containers **and** volumes — all stored logs and Grafana data |
-| `--images` | Vector, Loki and Grafana images |
+| `--containers` | 5 containers (logs, dashboards, state kept) |
+| `--volumes` | Containers **and** volumes (all logs, Grafana data, ntfy cache, responder state) |
+| `--images` | Vector, Loki, Grafana, ntfy and Python images |
 | `--files` | `/opt/visual-soc-analytics-traffic-dashboard` (configs, `.env`) |
-| `--tools` | Only packages `setup.sh` installed itself (tracked in `.setup-installed-tools`) |
-| `--all` | All of the above, in safe order |
-| `--yes` | Skip confirmations · `--help` shows usage |
+| `--tools` | Only what `setup.sh` installed (docker, compose plugin, curl, sysctl file) |
+| `--all` · `--yes` · `--help` | Everything in safe order · no prompts · usage |
 
-Without a local copy: `curl -fsSL https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/scripts/rollback.sh | sh -s -- --all --yes`
+**FortiGate** — run Alpine's rollback first, then **[Fortinet-cli.md step 11](docs/Fortinet-cli.md#11-rollback--remove-everything-this-guide-added)**: deletes policies 100–102, restores policy 3 to `USERS TO SERVERS` accept-all, removes the two VIPs from policy 4, the API user, profile, group and objects.
 
 ---
 
-## 8. Repository structure
+## 9. Upgrading an existing install
 
-```text
-Video-3-Visual-SOC-Analytics-Traffic-Dashboard/
-├── README.md                     ← you are here
-├── scripts/
-│   ├── setup.sh                  one-command Alpine deploy (+ self-test)
-│   ├── rollback.sh               selectable teardown
-│   ├── vt.md                     Alpine/container verification & troubleshooting
-│   └── kali-attack-campaign.sh   3-phase demo attack (runs on Kali, lab-guarded)
-├── compose/
-│   ├── docker-compose.yml        Vector · Loki · Grafana, healthchecks, soc_net
-│   ├── .env.example              pinned images, Grafana login, retention
-│   ├── vector.yaml               FortiOS key=value parser → blocked/detected/allowed
-│   ├── local-config.yaml         Loki single-node config, 7-day retention
-│   ├── grafana-datasource.yaml   Loki datasource (uid loki-fortigate)
-│   ├── grafana-dashboards.yaml   dashboard provider
-│   └── soc-wallboard.json        Live Wallboard (home dashboard)
-├── docs/
-│   ├── Lab-Matrix.md             design source of truth
-│   ├── Fortinet-cli.md           FortiGate CLI, in order
-│   ├── Fortinet-gui.md           same config as GUI click-paths
-│   ├── vt.md                     FortiGate verification & troubleshooting
-│   ├── config-a.md               Basic: login, wallboard, LogQL
-│   ├── config-b.md               Medium: attack campaign + threat hunting
-│   └── config-c.md               Advanced: alert rules + forensics
-├── app/
-│   ├── app-basic.json            Visual SOC 1 · Quickstart
-│   ├── app-medium.json           Visual SOC 2 · Threat Hunting
-│   ├── app-advanced.json         Visual SOC 3 · Detections & Forensics
-│   └── alert-rules.yaml          3 Grafana alert rules
-├── presentation/                 slide deck + teleprompter (video)
-└── marketing/                    YouTube description, tags, timestamps
+Re-run the latest `setup.sh` — it keeps `compose/.env` (password, token, topic) and data volumes, merges new settings, recreates `soc_net` on 10.89.0.0/24 if an older version created it elsewhere, removes retired dashboards and restarts every service so new configs apply:
+
+```sh
+cd /opt/visual-soc-analytics-traffic-dashboard
+curl -fsSLO https://raw.githubusercontent.com/rabakuku/Youtube/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/scripts/setup.sh
+./setup.sh
 ```
 
 ---
 
-## 9. Troubleshooting quick links
+## 10. Repository structure
 
-| Problem | Go to |
-|---|---|
-| Containers unhealthy, port 80/514 busy, image pulls fail | [scripts/vt.md → Troubleshooting](scripts/vt.md#9-troubleshooting) |
-| No data on the wallboard at all | [scripts/vt.md → Is FortiGate data arriving?](scripts/vt.md#6-is-fortigate-data-arriving) and [docs/vt.md → Syslog](docs/vt.md#2-syslog-is-leaving-the-fortigate-fortigate) |
-| Events move but **Blocked** stays at 0 | [docs/vt.md → Denied path](docs/vt.md#4-denied-path-kali--anything-else-in-vlan-10-policy-3) |
-| IPS panels empty | [docs/vt.md → IPS path](docs/vt.md#5-ips-path-web-attack-on-port-80-policy-2--soc-demo-ips) |
-| Alert rules missing or in *Error* | [docs/config-c.md → Common mistakes](docs/config-c.md#common-mistakes) |
-| Forgot the Grafana password | `grep GRAFANA_ADMIN_PASSWORD /opt/visual-soc-analytics-traffic-dashboard/compose/.env` |
-
-**Production notes:** UDP syslog is unauthenticated plaintext — fine in an isolated lab VLAN; in production use reliable/encrypted syslog or FortiAnalyzer, put Grafana behind HTTPS, and tune the IPS sensor instead of forcing every signature on.
+```text
+Video-3-Visual-SOC-Analytics-Traffic-Dashboard/
+├── README.md                       ← you are here
+├── scripts/
+│   ├── setup.sh                    one-command Alpine deploy / upgrade (+ self-tests)
+│   ├── rollback.sh                 selectable teardown (releases quarantines first)
+│   ├── vt.md                       Alpine/container verification & troubleshooting
+│   └── kali-attack-campaign.sh     3-phase demo attack (runs on Kali, lab-guarded)
+├── compose/
+│   ├── docker-compose.yml          Vector · Loki · Grafana · ntfy · responder · soc_net 10.89.0.0/24
+│   ├── .env.example                images, VIP URLs, quarantine settings, FortiGate API
+│   ├── vector.yaml                 FortiOS key=value parser → blocked/detected/allowed
+│   ├── local-config.yaml           Loki single-node, tuned against 429s, 7-day retention
+│   ├── grafana-datasource.yaml     Loki datasource (uid loki-fortigate)
+│   ├── grafana-dashboards.yaml     dashboard provider
+│   ├── grafana-contact-points.yaml every alert → soc-responder (internal :8092)
+│   └── soc-wallboard.json          Live Wallboard (home dashboard)
+├── app/
+│   ├── responder/responder.py      Grafana → ntfy buttons → FortiGate quarantine
+│   ├── alert-rules.yaml            3 Grafana alert rules
+│   └── app-advanced.json           Visual SOC · Detections & Response
+├── docs/
+│   ├── Lab-Matrix.md               design source of truth
+│   ├── Fortinet-cli.md             FGTQC01 CLI in order (+ rollback)
+│   ├── Fortinet-gui.md             same config as GUI click-paths
+│   ├── vt.md                       FortiGate verification & troubleshooting
+│   └── config.md                   wallboard, campaign, approval, investigation
+├── presentation/                   slide deck + teleprompter (video)
+└── marketing/                      YouTube description, tags, timestamps
+```
 
 ---
 
-## 10. Credits & license
+## 11. Troubleshooting quick links
+
+| Problem | Go to |
+|---|---|
+| Containers unhealthy, ports busy, image pulls fail | [scripts/vt.md → Troubleshooting](scripts/vt.md#9-troubleshooting) |
+| No data on the wallboard | [scripts/vt.md → Is FortiGate data arriving?](scripts/vt.md#7-is-fortigate-data-arriving) |
+| Responder in DRY-RUN, token rejected, buttons do nothing | [scripts/vt.md → Responder](scripts/vt.md#5-responder) · [docs/vt.md → Symptom → fix](docs/vt.md#7-symptom--fix) |
+| Kali reaches something it should not | [docs/vt.md → What Kali can and cannot reach](docs/vt.md#2-kali-what-it-can-and-cannot-reach-run-on-kali) |
+| Quarantine shown in ntfy but Kali still connects | [docs/vt.md → End-to-end quarantine test](docs/vt.md#5-end-to-end-quarantine-test) |
+| No ntfy alert after the scan, alerts in *Error* | [docs/config.md → Common mistakes](docs/config.md#common-mistakes) |
+| Forgot the Grafana password / ntfy topic | `grep -E 'GRAFANA_ADMIN_PASSWORD\|NTFY_TOPIC' /opt/visual-soc-analytics-traffic-dashboard/compose/.env` |
+
+**Production notes:** UDP syslog is plaintext — use reliable/encrypted syslog or FortiAnalyzer in production; put Grafana, ntfy and the responder behind HTTPS and authentication; tune the IPS sensor instead of forcing every signature on; an address-group quarantine only covers traffic the FortiGate routes — same-VLAN isolation needs switch/NAC quarantine.
+
+---
+
+## 12. Credits & license
 
 - Built for the **Deploy & Defend** YouTube channel — 🎬 _video link coming soon_
-- Open-source stack: [Vector](https://vector.dev/docs/) · [Grafana Loki](https://grafana.com/docs/loki/latest/) · [Grafana](https://grafana.com/docs/grafana/latest/) · [Alpine Linux](https://alpinelinux.org/) · [Docker](https://docs.docker.com/)
+- Open-source stack: [Vector](https://vector.dev/docs/) · [Grafana Loki](https://grafana.com/docs/loki/latest/) · [Grafana](https://grafana.com/docs/grafana/latest/) · [ntfy](https://docs.ntfy.sh/) · [Alpine Linux](https://alpinelinux.org/) · [Docker](https://docs.docker.com/)
 - Fortinet, FortiGate and FortiOS are trademarks of Fortinet, Inc. This is an independent community lab, not affiliated with or endorsed by Fortinet.
 - License: _add a LICENSE file to this repository and reference it here._

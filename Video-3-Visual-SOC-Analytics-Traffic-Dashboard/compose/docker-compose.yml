@@ -1,14 +1,19 @@
 # filepath: https://github.com/rabakuku/Youtube/blob/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/compose/docker-compose.yml
 # -----------------------------------------------------------------------------
-# Zero-Cost Visual SOC — Vector → Loki → Grafana on Alpine 3.24 (192.168.10.2)
-# Expected host layout (setup.sh in Stage 3 builds it):
-#   compose/docker-compose.yml
-#   compose/.env
-#   compose/vector/vector.yaml
-#   compose/loki/local-config.yaml
+# Zero-Cost Visual SOC — Vector → Loki → Grafana → responder → ntfy / FortiGate
+# Alpine 3.24 · 192.168.10.2 · reached from the admin PC through FGTQC01 VIPs
+#   172.24.66.52:8080 → :80   Grafana
+#   172.24.66.52:8090 → :8090 ntfy
+#   172.24.66.52:8091 → :8091 responder (button actions)
+# Host layout (setup.sh builds it):
+#   compose/docker-compose.yml  compose/.env
+#   compose/vector/vector.yaml  compose/loki/local-config.yaml
+#   compose/responder/responder.py
 #   compose/grafana/provisioning/datasources/grafana-datasource.yaml
 #   compose/grafana/provisioning/dashboards/grafana-dashboards.yaml
-#   compose/grafana/dashboards/soc-wallboard.json
+#   compose/grafana/provisioning/alerting/alert-rules.yaml
+#   compose/grafana/provisioning/alerting/contact-points.yaml
+#   compose/grafana/dashboards/*.json
 # -----------------------------------------------------------------------------
 name: visual-soc
 
@@ -17,13 +22,13 @@ services:
     image: ${LOKI_IMAGE:-grafana/loki:2.9.4}
     container_name: soc-loki
     restart: unless-stopped
-    env_file: .env
+    environment:
+      - LOKI_RETENTION_PERIOD=${LOKI_RETENTION_PERIOD:-168h}
     command:
       - -config.file=/etc/loki/local-config.yaml
       - -config.expand-env=true
     ports:
-      # Debug access from the Alpine host only — never exposed to VLAN 40
-      - "127.0.0.1:3100:3100"
+      - "127.0.0.1:3100:3100" # host-only debug port, never exposed to the network
     volumes:
       - ./loki/local-config.yaml:/etc/loki/local-config.yaml:ro
       - loki_data:/loki
@@ -40,12 +45,11 @@ services:
     image: ${VECTOR_IMAGE:-timberio/vector:0.36.0-alpine}
     container_name: soc-vector
     restart: unless-stopped
-    env_file: .env
     command: ["--config", "/etc/vector/vector.yaml"]
     environment:
       - VECTOR_LOG=${VECTOR_LOG:-info}
     ports:
-      - "514:514/udp" # FortiGate syslog ingestion (FGT 192.168.10.1 → 192.168.10.2:514)
+      - "514:514/udp" # FortiGate syslog (192.168.10.1 → 192.168.10.2:514)
     volumes:
       - ./vector/vector.yaml:/etc/vector/vector.yaml:ro
       - vector_data:/var/lib/vector
@@ -65,12 +69,12 @@ services:
     image: ${GRAFANA_IMAGE:-grafana/grafana:10.3.3}
     container_name: soc-grafana
     restart: unless-stopped
-    env_file: .env
     ports:
-      - "80:3000" # Web GUI on host port 80 (Kali → http://192.168.10.2)
+      - "80:3000" # VIP HTTP-TO-Grafana 172.24.66.52:8080 and Kali http://192.168.10.2
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in compose/.env}
+      - GF_SERVER_ROOT_URL=${PUBLIC_GRAFANA_URL:-http://172.24.66.52:8080}
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_AUTH_ANONYMOUS_ENABLED=${GRAFANA_ANONYMOUS_VIEWER:-false}
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
@@ -94,12 +98,76 @@ services:
     networks:
       - soc_net
 
+  ntfy:
+    image: ${NTFY_IMAGE:-binwiederhier/ntfy:v2.11.0}
+    container_name: soc-ntfy
+    restart: unless-stopped
+    command: ["serve"]
+    ports:
+      - "8090:80" # VIP NTFY-TO-SOC 172.24.66.52:8090
+    environment:
+      - NTFY_BASE_URL=${PUBLIC_NTFY_URL:-http://172.24.66.52:8090}
+      - NTFY_LISTEN_HTTP=:80
+      - NTFY_CACHE_FILE=/var/cache/ntfy/cache.db
+      - NTFY_CACHE_DURATION=24h
+      - NTFY_BEHIND_PROXY=false
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ntfy_cache:/var/cache/ntfy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --tries=1 -O- http://127.0.0.1:80/v1/health | grep -q '\"healthy\":true' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    networks:
+      - soc_net
+
+  responder:
+    image: ${RESPONDER_IMAGE:-python:3.12.7-alpine3.20}
+    container_name: soc-responder
+    restart: unless-stopped
+    env_file: .env # the only container that receives the FortiGate token
+    command: ["python", "-u", "/app/responder.py"]
+    ports:
+      - "8091:8091" # VIP RESPONDER-TO-SOC 172.24.66.52:8091 (signed button links only)
+    # 8092 (Grafana webhook) is deliberately NOT published: reachable only inside soc_net
+    environment:
+      - NTFY_INTERNAL_URL=http://soc-ntfy:80
+      - LOKI_URL=http://soc-loki:3100
+      - INTERNAL_NETS=10.89.0.0/24,127.0.0.0/8
+      - STATE_FILE=/data/state.json
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ./responder/responder.py:/app/responder.py:ro
+      - responder_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8092/health | grep -q '\"ok\": true' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    depends_on:
+      ntfy:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+    networks:
+      - soc_net
+
 volumes:
   vector_data:
   loki_data:
   grafana_data:
+  ntfy_cache:
+  responder_data:
 
 networks:
   soc_net:
     name: soc_net
     driver: bridge
+    ipam:
+      config:
+        # Pinned: Docker's automatic pool can pick 172.24.0.0/16, which overlaps the
+        # FortiGate WAN side (172.24.66.x) and would break replies to the admin PC.
+        - subnet: 10.89.0.0/24

@@ -3,6 +3,9 @@
 # Grafana 10.3 unified alerting — Visual SOC detections (provisioned, read-only)
 # Host path: compose/grafana/provisioning/alerting/alert-rules.yaml
 # Datasource: Loki uid "loki-fortigate" (compose/grafana-datasource.yaml)
+# Templates use .Labels / .Values (not the dollar-sign aliases): Grafana expands
+# environment variables in provisioning files, which would blank them out.
+# Every alert is routed to the soc-responder (compose/grafana-contact-points.yaml).
 # -----------------------------------------------------------------------------
 apiVersion: 1
 
@@ -24,9 +27,9 @@ groups:
           mitre: T1046
           source: fortigate
         annotations:
-          summary: "Port scan from {{ $labels.srcip }}"
-          description: "{{ $labels.srcip }} hit {{ $values.B.Value }} different denied ports in 60 seconds (threshold 20)."
-          runbook_url: https://github.com/rabakuku/Youtube/blob/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/docs/config-c.md
+          summary: "Port scan from {{ .Labels.srcip }}"
+          description: "{{ .Labels.srcip }} hit {{ .Values.B.Value }} different denied ports in 60 seconds (threshold 20)."
+          runbook_url: https://github.com/rabakuku/Youtube/blob/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/docs/config.md
         data:
           - refId: A
             relativeTimeRange:
@@ -77,9 +80,9 @@ groups:
           mitre: T1190
           source: fortigate
         annotations:
-          summary: "IPS: {{ $labels.attack }} from {{ $labels.srcip }}"
-          description: "FortiGate IPS matched {{ $labels.attack }} {{ $values.B.Value }} time(s) in 60 seconds from {{ $labels.srcip }}."
-          runbook_url: https://github.com/rabakuku/Youtube/blob/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/docs/config-c.md
+          summary: "IPS: {{ .Labels.attack }} from {{ .Labels.srcip }}"
+          description: "FortiGate IPS matched {{ .Labels.attack }} {{ .Values.B.Value }} time(s) in 60 seconds from {{ .Labels.srcip }}."
+          runbook_url: https://github.com/rabakuku/Youtube/blob/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/docs/config.md
         data:
           - refId: A
             relativeTimeRange:

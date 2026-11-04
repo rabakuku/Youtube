@@ -1,7 +1,7 @@
 {
  "uid": "visual-soc-detections",
- "title": "Visual SOC 3 · Detections & Forensics",
- "description": "Alert rules, scan-detector math, and attacker profiling.",
+ "title": "Visual SOC · Detections & Response",
+ "description": "Alert rules, scan math, quarantine actions and attacker forensics.",
  "tags": [
   "fortigate",
   "soc",
@@ -9,16 +9,15 @@
   "visual-soc"
  ],
  "timezone": "browser",
- "editable": true,
+ "editable": false,
  "graphTooltip": 1,
  "time": {
-  "from": "now-15m",
+  "from": "now-30m",
   "to": "now"
  },
  "refresh": "30s",
  "timepicker": {
   "refresh_intervals": [
-   "5s",
    "10s",
    "30s",
    "1m",
@@ -26,7 +25,7 @@
   ]
  },
  "schemaVersion": 39,
- "version": 1,
+ "version": 2,
  "liveNow": false,
  "templating": {
   "list": []
@@ -51,16 +50,16 @@
      "uid": "loki-fortigate"
     },
     "enable": true,
-    "iconColor": "red",
-    "name": "IPS events",
+    "iconColor": "purple",
+    "name": "Quarantine actions",
     "target": {
      "refId": "Anno",
-     "expr": "{source=\"fortigate\", log_type=\"utm\"} | json | subtype=\"ips\"",
+     "expr": "{source=\"responder\", event=~\"quarantine|release\"} | json ip, event",
      "queryType": "range"
     },
-    "textFormat": "{{attack}} from {{srcip}}",
-    "tagKeys": "action",
-    "titleFormat": "IPS"
+    "textFormat": "{{event}} {{ip}}",
+    "titleFormat": "Responder",
+    "tagKeys": "event"
    }
   ]
  },
@@ -78,7 +77,7 @@
    "id": 1,
    "type": "alertlist",
    "title": "Detections — firing & pending",
-   "description": "Grafana alert rules from app/alert-rules.yaml.",
+   "description": "Grafana alert rules (app/alert-rules.yaml).",
    "gridPos": {
     "h": 8,
     "w": 10,
@@ -111,19 +110,19 @@
    "id": 2,
    "type": "stat",
    "title": "Port-scan score (60s)",
-   "description": "Highest number of distinct denied ports from a single source in the last minute. Alert threshold: 20.",
+   "description": "Most distinct denied ports from one source in the last minute. Alert at > 20.",
    "datasource": {
     "type": "loki",
     "uid": "loki-fortigate"
    },
    "gridPos": {
     "h": 8,
-    "w": 7,
+    "w": 5,
     "x": 10,
     "y": 0
    },
    "interval": "15s",
-   "maxDataPoints": 120,
+   "maxDataPoints": 60,
    "targets": [
     {
      "datasource": {
@@ -139,8 +138,8 @@
    "fieldConfig": {
     "defaults": {
      "unit": "short",
-     "decimals": 0,
      "noValue": "0",
+     "decimals": 0,
      "color": {
       "mode": "thresholds"
      },
@@ -160,7 +159,8 @@
         "value": 20
        }
       ]
-     }
+     },
+     "mappings": []
     },
     "overrides": []
    },
@@ -185,19 +185,19 @@
    "id": 3,
    "type": "stat",
    "title": "IPS hits (60s)",
-   "description": "Any IPS signature match fires the 'Web attack' alert.",
+   "description": "Any IPS match fires the web-attack alert.",
    "datasource": {
     "type": "loki",
     "uid": "loki-fortigate"
    },
    "gridPos": {
     "h": 8,
-    "w": 7,
-    "x": 17,
+    "w": 5,
+    "x": 15,
     "y": 0
    },
    "interval": "15s",
-   "maxDataPoints": 120,
+   "maxDataPoints": 60,
    "targets": [
     {
      "datasource": {
@@ -213,8 +213,8 @@
    "fieldConfig": {
     "defaults": {
      "unit": "short",
-     "decimals": 0,
      "noValue": "0",
+     "decimals": 0,
      "color": {
       "mode": "thresholds"
      },
@@ -230,7 +230,8 @@
         "value": 1
        }
       ]
-     }
+     },
+     "mappings": []
     },
     "overrides": []
    },
@@ -253,9 +254,90 @@
   },
   {
    "id": 4,
+   "type": "stat",
+   "title": "QUARANTINED",
+   "description": "IPs currently in SOC-Quarantine.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 4,
+    "x": 20,
+    "y": 0
+   },
+   "interval": "15s",
+   "maxDataPoints": 60,
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "sum(last_over_time({source=\"responder\", event=\"state\"} | json count | unwrap count [2m])) or vector(0)",
+     "queryType": "range",
+     "editorMode": "code"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "noValue": "NONE",
+     "decimals": 0,
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "purple",
+        "value": 1
+       }
+      ]
+     },
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "NONE",
+         "index": 0
+        }
+       }
+      }
+     ]
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "area",
+    "justifyMode": "center",
+    "textMode": "value",
+    "orientation": "auto",
+    "wideLayout": true,
+    "showPercentChange": false
+   }
+  },
+  {
+   "id": 5,
    "type": "timeseries",
    "title": "Scan detector — distinct denied ports per source (60s window)",
-   "description": "Crossing the red line (20) means a port scan. Red markers = IPS events (annotation).",
+   "description": "Crossing 20 = port scan. Purple markers = quarantine / release.",
    "datasource": {
     "type": "loki",
     "uid": "loki-fortigate"
@@ -266,8 +348,8 @@
     "x": 0,
     "y": 8
    },
-   "interval": "30s",
-   "maxDataPoints": 200,
+   "interval": "15s",
+   "maxDataPoints": 120,
    "targets": [
     {
      "datasource": {
@@ -329,10 +411,112 @@
    }
   },
   {
-   "id": 5,
+   "id": 6,
+   "type": "timeseries",
+   "title": "Quarantine at work — attempts blocked by SOC_Quarantine_Block",
+   "description": "Every connection a quarantined IP tried after the ban.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 9,
+    "w": 12,
+    "x": 0,
+    "y": 17
+   },
+   "interval": "15s",
+   "maxDataPoints": 120,
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "sum by (srcip) (count_over_time({source=\"fortigate\", log_type=\"traffic\", verdict=\"blocked\"} | json | policyname=\"SOC_Quarantine_Block\" [$__interval]))",
+     "queryType": "range",
+     "editorMode": "code",
+     "legendFormat": "{{srcip}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 80,
+      "lineWidth": 1,
+      "stacking": {
+       "mode": "normal",
+       "group": "A"
+      },
+      "showPoints": "never"
+     },
+     "unit": "short",
+     "color": {
+      "mode": "fixed",
+      "fixedColor": "purple"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "id": 7,
+   "type": "logs",
+   "title": "Response Actions",
+   "description": "Approvals, quarantines, releases, failures — newest first.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 9,
+    "w": 12,
+    "x": 12,
+    "y": 17
+   },
+   "maxDataPoints": 100,
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "{source=\"responder\", event=~\"quarantine|release|ignored|approval_requested|allowlisted|quarantine_failed|release_failed\"} | json | label_format level=`{{ if eq .event \"quarantine\" }}error{{ else if eq .event \"release\" }}info{{ else if eq .event \"approval_requested\" }}warning{{ else if eq .event \"quarantine_failed\" }}critical{{ else if eq .event \"release_failed\" }}critical{{ else }}debug{{ end }}` | line_format `{{ .event | upper }}  {{ .ip }}{{ if .reason }}  · {{ .reason }}{{ end }}{{ if .by }}  · by {{ .by }}{{ end }}{{ if .why }}  · {{ .why }}{{ end }}{{ if eq .dry_run \"true\" }}  [DRY RUN]{{ end }}`",
+     "queryType": "range",
+     "editorMode": "code",
+     "maxLines": 100
+    }
+   ],
+   "options": {
+    "showTime": true,
+    "showLabels": false,
+    "showCommonLabels": false,
+    "wrapLogMessage": false,
+    "prettifyLogMessage": false,
+    "enableLogDetails": true,
+    "dedupStrategy": "none",
+    "sortOrder": "Descending"
+   }
+  },
+  {
+   "id": 8,
    "type": "table",
    "title": "Attacker profile — everything each blocked source tried",
-   "description": "Forensic view: per source, which ports and signatures were blocked.",
+   "description": "Per source: every blocked port, service, IPS signature and the policy that stopped it.",
    "datasource": {
     "type": "loki",
     "uid": "loki-fortigate"
@@ -341,7 +525,7 @@
     "h": 10,
     "w": 12,
     "x": 0,
-    "y": 17
+    "y": 26
    },
    "targets": [
     {
@@ -350,7 +534,7 @@
       "uid": "loki-fortigate"
      },
      "refId": "A",
-     "expr": "sum by (srcip, dstport, service, attack) (count_over_time({source=\"fortigate\", verdict=\"blocked\"} | json [$__range]))",
+     "expr": "topk(25, sum by (srcip, dstport, service, attack, policyname) (count_over_time({source=\"fortigate\", verdict=\"blocked\"} | json [$__range])))",
      "queryType": "instant",
      "editorMode": "code"
     }
@@ -371,6 +555,7 @@
        "dstport": "Port",
        "service": "Service",
        "attack": "IPS signature",
+       "policyname": "Blocked by",
        "Value #A": "Blocked",
        "Value": "Blocked"
       }
@@ -435,10 +620,10 @@
    }
   },
   {
-   "id": 6,
+   "id": 9,
    "type": "bargauge",
    "title": "Kill chain — blocked events by phase",
-   "description": "Rough MITRE-style split: recon (denied ports) vs exploitation attempts (IPS on port 80).",
+   "description": "Recon → exploit → contained. Egress = Kali tried to reach WAN.",
    "datasource": {
     "type": "loki",
     "uid": "loki-fortigate"
@@ -447,7 +632,7 @@
     "h": 10,
     "w": 12,
     "x": 12,
-    "y": 17
+    "y": 26
    },
    "targets": [
     {
@@ -456,7 +641,7 @@
       "uid": "loki-fortigate"
      },
      "refId": "A",
-     "expr": "sum by (phase) (count_over_time({source=\"fortigate\", verdict=\"blocked\"} | json | label_format phase=`{{ if eq .log_type \"utm\" }}3 · Exploit (IPS){{ else if eq .dstport \"80\" }}3 · Exploit (IPS){{ else }}2 · Recon (port scan){{ end }}` [$__range]))",
+     "expr": "sum by (phase) (count_over_time({source=\"fortigate\", verdict=\"blocked\"} | json | label_format phase=`{{ if eq .policyname \"SOC_Quarantine_Block\" }}4 · Contained (quarantine){{ else if eq .log_type \"utm\" }}3 · Exploit (IPS){{ else if eq .policyname \"Kali_To_WAN_Deny\" }}5 · Egress attempt (WAN){{ else }}2 · Recon (port scan){{ end }}` [$__range]))",
      "queryType": "instant",
      "editorMode": "code",
      "legendFormat": "{{phase}}"
@@ -490,6 +675,114 @@
     },
     "minVizHeight": 16,
     "maxVizHeight": 40
+   }
+  },
+  {
+   "id": 10,
+   "type": "table",
+   "title": "Conversations — who talked to what",
+   "description": "Every source → destination:port pair and the policy that handled it.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 10,
+    "w": 24,
+    "x": 0,
+    "y": 36
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "topk(25, sum by (srcip, dstip, dstport, service, policyname, verdict) (count_over_time({source=\"fortigate\", log_type=\"traffic\"} | json [$__range])))",
+     "queryType": "instant",
+     "editorMode": "code"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "srcip": "Source",
+       "dstip": "Destination",
+       "dstport": "Port",
+       "service": "Service",
+       "policyname": "Policy",
+       "verdict": "Verdict",
+       "Value #A": "Events",
+       "Value": "Events"
+      }
+     }
+    },
+    {
+     "id": "sortBy",
+     "options": {
+      "sort": [
+       {
+        "field": "Events",
+        "desc": true
+       }
+      ]
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "align": "auto",
+      "cellOptions": {
+       "type": "auto"
+      },
+      "filterable": true
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Events"
+      },
+      "properties": [
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "gauge",
+         "mode": "gradient"
+        }
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "continuous-YlRd"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false,
+     "reducer": [
+      "sum"
+     ],
+     "fields": ""
+    }
    }
   }
  ]

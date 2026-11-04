@@ -1,7 +1,7 @@
 {
  "uid": "fortinet-visual-soc",
  "title": "Fortinet Visual SOC — Live Wallboard",
- "description": "FortiOS 7.4 syslog → Vector → Loki → Grafana. Zero-cost SOC lab by Deploy & Defend.",
+ "description": "FortiOS 7.4 syslog → Vector → Loki → Grafana → responder → ntfy / FortiGate quarantine. Zero-cost SOC lab by Deploy & Defend.",
  "tags": [
   "fortigate",
   "soc",
@@ -26,16 +26,53 @@
   ]
  },
  "schemaVersion": 39,
- "version": 1,
- "style": "dark",
+ "version": 2,
  "liveNow": false,
  "templating": {
   "list": []
  },
  "annotations": {
-  "list": []
+  "list": [
+   {
+    "builtIn": 1,
+    "datasource": {
+     "type": "grafana",
+     "uid": "-- Grafana --"
+    },
+    "enable": true,
+    "hide": true,
+    "iconColor": "rgba(0, 211, 255, 1)",
+    "name": "Annotations & Alerts",
+    "type": "dashboard"
+   },
+   {
+    "datasource": {
+     "type": "loki",
+     "uid": "loki-fortigate"
+    },
+    "enable": true,
+    "iconColor": "purple",
+    "name": "Quarantine actions",
+    "target": {
+     "refId": "Anno",
+     "expr": "{source=\"responder\", event=~\"quarantine|release\"} | json ip, event",
+     "queryType": "range"
+    },
+    "textFormat": "{{event}} {{ip}}",
+    "titleFormat": "Responder",
+    "tagKeys": "event"
+   }
+  ]
  },
- "links": [],
+ "links": [
+  {
+   "title": "Detections & Response",
+   "type": "link",
+   "url": "/d/visual-soc-detections",
+   "icon": "dashboard",
+   "targetBlank": false
+  }
+ ],
  "panels": [
   {
    "id": 1,
@@ -48,7 +85,7 @@
    },
    "gridPos": {
     "h": 5,
-    "w": 6,
+    "w": 5,
     "x": 0,
     "y": 0
    },
@@ -150,7 +187,7 @@
    "id": 2,
    "type": "stat",
    "title": "Events (5m)",
-   "description": "Every FortiGate log received by Vector in the last 5 minutes.",
+   "description": "Every FortiGate log received in the last 5 minutes.",
    "datasource": {
     "type": "loki",
     "uid": "loki-fortigate"
@@ -158,7 +195,7 @@
    "gridPos": {
     "h": 5,
     "w": 3,
-    "x": 6,
+    "x": 5,
     "y": 0
    },
    "interval": "15s",
@@ -217,7 +254,7 @@
    "id": 3,
    "type": "stat",
    "title": "Blocked (5m)",
-   "description": "Firewall denies + IPS drops/resets in the last 5 minutes.",
+   "description": "Firewall denies + IPS drops/resets.",
    "datasource": {
     "type": "loki",
     "uid": "loki-fortigate"
@@ -225,7 +262,7 @@
    "gridPos": {
     "h": 5,
     "w": 3,
-    "x": 9,
+    "x": 8,
     "y": 0
    },
    "interval": "15s",
@@ -288,7 +325,7 @@
    "id": 4,
    "type": "stat",
    "title": "IPS Detections (5m)",
-   "description": "IPS signature matches (needs a licensed IPS package on the FortiGate).",
+   "description": "IPS signature matches.",
    "datasource": {
     "type": "loki",
     "uid": "loki-fortigate"
@@ -296,7 +333,7 @@
    "gridPos": {
     "h": 5,
     "w": 3,
-    "x": 12,
+    "x": 11,
     "y": 0
    },
    "interval": "15s",
@@ -359,7 +396,7 @@
    "id": 5,
    "type": "stat",
    "title": "Attacker IPs (15m)",
-   "description": "Distinct source IPs that triggered at least one block.",
+   "description": "Distinct sources with at least one block.",
    "datasource": {
     "type": "loki",
     "uid": "loki-fortigate"
@@ -367,7 +404,7 @@
    "gridPos": {
     "h": 5,
     "w": 3,
-    "x": 15,
+    "x": 14,
     "y": 0
    },
    "interval": "15s",
@@ -430,7 +467,7 @@
    "id": 6,
    "type": "stat",
    "title": "Ports Probed (15m)",
-   "description": "Distinct destination ports hit by denied connections — a port scan makes this jump.",
+   "description": "Distinct denied destination ports — a port scan makes this jump.",
    "datasource": {
     "type": "loki",
     "uid": "loki-fortigate"
@@ -438,7 +475,7 @@
    "gridPos": {
     "h": 5,
     "w": 3,
-    "x": 18,
+    "x": 17,
     "y": 0
    },
    "interval": "15s",
@@ -504,16 +541,16 @@
   {
    "id": 7,
    "type": "stat",
-   "title": "Allowed Sessions (5m)",
-   "description": "Sessions that passed a FortiGate policy.",
+   "title": "QUARANTINED",
+   "description": "IPs the responder is holding in the FortiGate quarantine group right now (from its 30-second state heartbeat).",
    "datasource": {
     "type": "loki",
     "uid": "loki-fortigate"
    },
    "gridPos": {
     "h": 5,
-    "w": 3,
-    "x": 21,
+    "w": 4,
+    "x": 20,
     "y": 0
    },
    "interval": "15s",
@@ -525,7 +562,7 @@
       "uid": "loki-fortigate"
      },
      "refId": "A",
-     "expr": "sum(count_over_time({source=\"fortigate\", log_type=\"traffic\", verdict=\"allowed\"}[5m])) or vector(0)",
+     "expr": "sum(last_over_time({source=\"responder\", event=\"state\"} | json count | unwrap count [2m])) or vector(0)",
      "queryType": "range",
      "editorMode": "code"
     }
@@ -533,7 +570,7 @@
    "fieldConfig": {
     "defaults": {
      "unit": "short",
-     "noValue": "0",
+     "noValue": "NONE",
      "decimals": 0,
      "color": {
       "mode": "thresholds"
@@ -544,10 +581,24 @@
        {
         "color": "green",
         "value": null
+       },
+       {
+        "color": "purple",
+        "value": 1
        }
       ]
      },
-     "mappings": []
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "NONE",
+         "index": 0
+        }
+       }
+      }
+     ]
     },
     "overrides": []
    },
@@ -572,9 +623,7 @@
    "id": 8,
    "type": "timeseries",
    "title": "Attack Timeline — Allowed vs Blocked vs Detected",
-   "interval": "15s",
-   "maxDataPoints": 120,
-   "description": "Log volume per interval, split by the verdict Vector assigns.",
+   "description": "Purple markers = quarantine / release actions.",
    "datasource": {
     "type": "loki",
     "uid": "loki-fortigate"
@@ -585,6 +634,8 @@
     "x": 0,
     "y": 5
    },
+   "interval": "15s",
+   "maxDataPoints": 120,
    "targets": [
     {
      "datasource": {
@@ -608,7 +659,6 @@
        "mode": "normal",
        "group": "A"
       },
-      "barAlignment": 0,
       "showPoints": "never"
      },
      "unit": "short",
@@ -915,6 +965,36 @@
         }
        }
       ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "SOC_Quarantine_Block"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "purple"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Kali_To_WAN_Deny"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "dark-red"
+        }
+       }
+      ]
      }
     ]
    },
@@ -947,7 +1027,6 @@
    "id": 13,
    "type": "logs",
    "title": "Live SOC Event Stream",
-   "maxDataPoints": 150,
    "description": "Newest first. Red = blocked, yellow = detected, green = allowed.",
    "datasource": {
     "type": "loki",
@@ -955,10 +1034,11 @@
    },
    "gridPos": {
     "h": 12,
-    "w": 24,
+    "w": 16,
     "x": 0,
     "y": 24
    },
+   "maxDataPoints": 150,
    "targets": [
     {
      "datasource": {
@@ -970,6 +1050,46 @@
      "queryType": "range",
      "editorMode": "code",
      "maxLines": 150
+    }
+   ],
+   "options": {
+    "showTime": true,
+    "showLabels": false,
+    "showCommonLabels": false,
+    "wrapLogMessage": false,
+    "prettifyLogMessage": false,
+    "enableLogDetails": true,
+    "dedupStrategy": "none",
+    "sortOrder": "Descending"
+   }
+  },
+  {
+   "id": 14,
+   "type": "logs",
+   "title": "Response Actions",
+   "description": "What the responder did: approvals, quarantines, releases.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-fortigate"
+   },
+   "gridPos": {
+    "h": 12,
+    "w": 8,
+    "x": 16,
+    "y": 24
+   },
+   "maxDataPoints": 50,
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-fortigate"
+     },
+     "refId": "A",
+     "expr": "{source=\"responder\", event=~\"quarantine|release|ignored|approval_requested|allowlisted|quarantine_failed|release_failed\"} | json | label_format level=`{{ if eq .event \"quarantine\" }}error{{ else if eq .event \"release\" }}info{{ else if eq .event \"approval_requested\" }}warning{{ else if eq .event \"quarantine_failed\" }}critical{{ else if eq .event \"release_failed\" }}critical{{ else }}debug{{ end }}` | line_format `{{ .event | upper }}  {{ .ip }}{{ if .reason }}  · {{ .reason }}{{ end }}{{ if .by }}  · by {{ .by }}{{ end }}{{ if .why }}  · {{ .why }}{{ end }}{{ if eq .dry_run \"true\" }}  [DRY RUN]{{ end }}`",
+     "queryType": "range",
+     "editorMode": "code",
+     "maxLines": 50
     }
    ],
    "options": {

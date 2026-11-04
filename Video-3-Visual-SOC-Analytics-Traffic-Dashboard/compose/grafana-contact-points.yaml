@@ -1,0 +1,29 @@
+# filepath: https://github.com/rabakuku/Youtube/blob/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/compose/grafana-contact-points.yaml
+# -----------------------------------------------------------------------------
+# Grafana 10.3 alerting provisioning — every alert goes to the soc-responder
+# Host path: compose/grafana/provisioning/alerting/contact-points.yaml
+# The responder turns alerts into ntfy notifications (with Quarantine buttons).
+# Port 8092 exists only inside soc_net — it is not published on the host.
+# Grafana expands environment variables in provisioning values: keep dollar signs out.
+# -----------------------------------------------------------------------------
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: soc-responder
+    receivers:
+      - uid: soc-responder-webhook
+        type: webhook
+        disableResolveMessage: false
+        settings:
+          url: http://soc-responder:8092/grafana
+          httpMethod: POST
+          maxAlerts: 20
+
+policies:
+  - orgId: 1
+    receiver: soc-responder
+    group_by: ["alertname", "srcip"]
+    group_wait: 5s
+    group_interval: 1m
+    repeat_interval: 1h

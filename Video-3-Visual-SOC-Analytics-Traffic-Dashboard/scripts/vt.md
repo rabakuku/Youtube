@@ -1,7 +1,7 @@
 <!-- filepath: https://github.com/rabakuku/Youtube/blob/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/scripts/vt.md -->
 # Verification & Troubleshooting — Visual SOC Stack (Alpine 3.24, 192.168.10.2)
 
-All commands run as root on the Alpine host from `/opt/visual-soc-analytics-traffic-dashboard/compose` unless a section says otherwise.
+All commands run as root on the Alpine host from the compose folder unless a section says otherwise:
 
 ```sh
 cd /opt/visual-soc-analytics-traffic-dashboard/compose
@@ -10,122 +10,127 @@ cd /opt/visual-soc-analytics-traffic-dashboard/compose
 ## 1. Docker engine
 
 ```sh
-service docker status          # expect: * status: started
+service docker status                     # * status: started
 docker info --format '{{.ServerVersion}}'
-rc-update show default | grep docker   # expect: docker | default
+rc-update show default | grep docker      # docker | default
 ```
 
 ## 2. Containers
 
 ```sh
-docker ps                      # running containers only
-docker ps -a                   # includes exited / restarting ones
-docker compose ps              # expect 3 rows, STATUS "Up ... (healthy)"
-```
-
-Health of each container:
-
-```sh
-for c in soc-loki soc-vector soc-grafana; do
-  printf '%-12s %s\n' "$c" "$(docker inspect --format '{{.State.Health.Status}}' "$c")"
+docker compose ps                         # 5 rows, all "(healthy)"
+for c in soc-loki soc-vector soc-grafana soc-ntfy soc-responder; do
+  printf '%-14s %s\n' "$c" "$(docker inspect --format '{{.State.Health.Status}}' "$c")"
 done
+docker network inspect soc_net --format '{{range .IPAM.Config}}{{.Subnet}}{{end}}'   # 10.89.0.0/24
 ```
 
-Good output: all three print `healthy`. `starting` is normal for the first ~30 s.
+`starting` is normal for the first ~30 s. The subnet must be `10.89.0.0/24` — anything in 172.24.x.x collides with the FortiGate WAN and breaks the VIPs.
 
 ## 3. Listeners
 
 ```sh
-netstat -tulpn | grep -E ':(80|514|3100)\b'
-# or, with iproute2 installed (apk add iproute2):
-ss -tulpn | grep -E ':(80|443|514|3100)\b'
+netstat -tulpn | grep -E ':(80|514|3100|8090|8091|8092)\b'
 ```
 
 | Expect | Meaning |
 |---|---|
-| `0.0.0.0:80` TCP, process `docker-proxy` | Grafana wallboard reachable from VLAN 40 |
-| `0.0.0.0:514` UDP, process `docker-proxy` | Vector syslog input for the FortiGate |
-| `127.0.0.1:3100` TCP | Loki API — host-only debug port, never exposed to the network |
-
-Port 443 is intentionally unused in this lab (HTTP only).
+| `0.0.0.0:80` tcp | Grafana (VIP 172.24.66.52:8080, and Kali via policy) |
+| `0.0.0.0:514` udp | Vector syslog input |
+| `127.0.0.1:3100` tcp | Loki — host-only debug port |
+| `0.0.0.0:8090` tcp | ntfy (VIP 172.24.66.52:8090) |
+| `0.0.0.0:8091` tcp | Responder button links (VIP 172.24.66.52:8091) |
+| **no** `:8092` | Correct: the Grafana webhook port exists only inside soc_net |
 
 ## 4. HTTP checks (on Alpine)
 
 ```sh
-curl -I http://127.0.0.1                         # expect HTTP/1.1 302 Found → /login
-curl -s http://127.0.0.1/api/health              # expect "database": "ok"
-curl -s http://127.0.0.1:3100/ready              # expect: ready
-curl -s http://127.0.0.1:3100/loki/api/v1/labels # expect: action, log_type, source, verdict (after first logs)
+curl -I http://127.0.0.1                          # HTTP/1.1 302 Found → /login
+curl -s http://127.0.0.1/api/health               # "database": "ok"
+curl -s http://127.0.0.1:3100/ready               # ready
+curl -s http://127.0.0.1:8090/v1/health           # {"healthy":true}
+curl -s http://127.0.0.1:8091/health              # {"ok": true, "dry_run": ..., "mode": "approve", ...}
 ```
 
-## 5. Logs
+## 5. Responder
+
+Current settings and state:
 
 ```sh
-docker compose logs --tail=20 -f grafana
-docker compose logs --tail=20 -f loki
-docker compose logs --tail=20 -f vector
+grep -E '^(QUARANTINE_|PUBLIC_|FGT_HOST|FGT_QUARANTINE_GROUP|NTFY_TOPIC)' .env
+curl -s http://127.0.0.1:8091/health              # dry_run, mode, quarantined[], pending[]
+docker compose logs --tail=30 responder
 ```
 
-Turn on parse-failure messages in Vector:
+`"dry_run": true` means no FortiGate token is stored — everything works except the FortiGate change. After Stage 4:
 
 ```sh
-sed -i 's/^VECTOR_LOG=.*/VECTOR_LOG=debug/' .env && docker compose up -d vector
-docker compose logs -f vector | grep -i unparseable
-# revert afterwards: VECTOR_LOG=info
+(cd /opt/visual-soc-analytics-traffic-dashboard && ./setup.sh --fgt-token <TOKEN>)
 ```
 
-## 6. Is FortiGate data arriving?
-
-Raw packets on the wire (`apk add tcpdump` if missing):
+Test the token by hand (expect `200` once the group exists, `404` before Stage 4):
 
 ```sh
-tcpdump -ni eth0 udp port 514 -c 5
+. ./.env 2>/dev/null; curl -sk -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $FGT_API_TOKEN" \
+  "https://$FGT_HOST/api/v2/cmdb/firewall/addrgrp/$FGT_QUARANTINE_GROUP?vdom=$FGT_VDOM"
 ```
 
-Logs stored in Loki in the last 5 minutes, by verdict:
+Fire a fake alert at the responder from inside soc_net (shows the full approval flow in ntfy without attacking anything):
 
 ```sh
+docker exec soc-responder wget -q -O- --header 'Content-Type: application/json' --post-data \
+ '{"alerts":[{"status":"firing","labels":{"alertname":"Port scan detected","srcip":"192.168.40.3","severity":"high"},"annotations":{"description":"Manual test alert"}}]}' \
+ http://127.0.0.1:8092/grafana
+```
+
+Release everything at once (also done automatically by `rollback.sh`):
+
+```sh
+docker exec soc-responder wget -q -O- --post-data='' http://127.0.0.1:8092/release-all
+```
+
+## 6. ntfy
+
+On the admin PC open `http://172.24.66.52:8090/<NTFY_TOPIC>` (topic from `.env`), click **Subscribe**, allow browser notifications. Then on Alpine:
+
+```sh
+. ./.env; curl -s -H "Title: ntfy test" -d "Hello from Alpine" "http://127.0.0.1:8090/$NTFY_TOPIC"
+```
+
+## 7. Is FortiGate data arriving?
+
+```sh
+tcpdump -ni eth0 udp port 514 -c 5        # apk add tcpdump if missing
 curl -sG http://127.0.0.1:3100/loki/api/v1/query \
   --data-urlencode 'query=sum by (verdict) (count_over_time({source="fortigate"}[5m]))'
+curl -sG http://127.0.0.1:3100/loki/api/v1/query \
+  --data-urlencode 'query=sum by (event) (count_over_time({source="responder"}[1h]))'   # responder audit
 ```
 
-Newest three log lines:
+## 8. Logs, disk, kernel buffer
 
 ```sh
-curl -sG http://127.0.0.1:3100/loki/api/v1/query_range \
-  --data-urlencode 'query={source="fortigate"}' --data-urlencode 'limit=3'
-```
-
-## 7. Disk & volumes
-
-```sh
-df -h /var/lib/docker
-docker system df
-docker volume ls | grep visual-soc
-docker run --rm -v visual-soc_loki_data:/d alpine du -sh /d
-```
-
-Loki keeps 7 days (`LOKI_RETENTION_PERIOD=168h`); the compactor deletes older chunks automatically. Vector's disk buffer can use up to ~256 MiB in `visual-soc_vector_data` while Loki is down.
-
-## 8. From Kali (192.168.40.3)
-
-```sh
-curl -I http://192.168.10.2        # expect 302 Found (policy 2 Kali_To_SOC_Web)
-curl -m 3 telnet://192.168.10.2:22 # expect timeout (policy 3 deny) — and a red line on the wallboard
+docker compose logs --tail=20 -f grafana        # also: loki, vector, ntfy, responder
+cat /proc/sys/net/core/rmem_max                 # 8388608
+df -h /var/lib/docker; docker system df
 ```
 
 ## 9. Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `TCP 80 is already in use` from setup.sh | Another web server (lighttpd, nginx) on the host | `netstat -tlnp \| grep ':80 '` → stop it: `rc-service <name> stop; rc-update del <name>` → re-run setup.sh |
-| `UDP 514 is already in use` | Alpine's own syslogd listening remotely (`-R`/`-l` options) or rsyslog | `netstat -ulnp \| grep ':514 '` → remove the remote-listen option or `rc-service rsyslog stop` |
-| `Cannot connect to the Docker daemon` | Docker service not running | `service docker start`; check `/var/log/docker.log`; `rc-update add docker default` |
-| `permission denied` on `/var/run/docker.sock` | Running as a non-root user | Run as root, or `addgroup <user> docker` and log in again |
-| `apk update` / image pull fails | Alpine has no internet — FortiGate policy 4 (SOC_To_Internet) missing, or no DNS | `ping -c2 1.1.1.1`, `nslookup registry-1.docker.io`; add policy 4 and set DNS in `/etc/resolv.conf` |
-| A container stays `unhealthy` | Wrong config file or Loki still starting | `docker compose logs --tail=50 <svc>`; Loki needs ~15–30 s after "ready" wait; re-run setup.sh to refresh configs |
-| Grafana shows "No data" everywhere | No syslog arriving | Section 6: no packets → FortiGate `config log syslogd setting` (server 192.168.10.2, udp, 514); packets but no data → Vector debug logs |
-| IPS panels empty, deny panels work | FortiGate IPS package unlicensed/outdated, or no IPS sensor on policy 2 | FortiGate: `diagnose autoupdate versions`; check `set ips-sensor` on policy 2 (Stage 4) |
-| Kali cannot open http://192.168.10.2 | No policy 2, wrong address object, or Kali gateway not 192.168.40.1 | FortiGate: `diagnose debug flow` (see Stage 4); Kali: `ip route` |
-| Forgot the Grafana password | Generated by setup.sh, printed once | `grep GRAFANA_ADMIN_PASSWORD .env` (changing it later needs `docker compose down -v` or `docker exec -it soc-grafana grafana cli admin reset-admin-password <new>`) |
-| Wallboard is not the home page | Old `grafana_data` volume from a previous lab | `docker compose down -v` (deletes data) then `docker compose up -d` |
+| `Port 80/8090/8091 ... already in use` | Another service on the host | `netstat -tlnp \| grep ':<port> '` → stop it → re-run setup.sh |
+| `UDP 514 is already in use` | Alpine syslogd/rsyslog listening remotely | Remove the remote-listen option or stop rsyslog |
+| `Cannot connect to the Docker daemon` | Docker not running | `service docker start`; `rc-update add docker default` |
+| `apk update` / image pull fails | No internet from SERVERS | FortiGate policy `SERVERS TO WAN`; DNS in `/etc/resolv.conf` |
+| A container stays `unhealthy` | Config error or slow start | `docker compose logs --tail=50 <svc>`; re-run setup.sh |
+| soc_net shows 172.x.x.x subnet | Created by an older version | Re-run setup.sh (it recreates soc_net, volumes kept) |
+| Grafana "No data" everywhere | No syslog arriving | Section 7; FortiGate `get log syslogd setting` |
+| Grafana panels show `429 too many outstanding requests` | Old Loki config | Re-run setup.sh (refreshes `loki/local-config.yaml` and restarts) |
+| Alert fires in Grafana, nothing in ntfy | Contact point not provisioned, or wrong topic | Grafana → Alerting → Contact points shows **soc-responder**; `docker compose logs responder`; topic in browser = `NTFY_TOPIC` |
+| Buttons do nothing in the ntfy web app | Admin PC cannot reach 172.24.66.52:8091, or wrong `PUBLIC_RESPONDER_URL` | Open `http://172.24.66.52:8091/health` on the PC; VIP RESPONDER-TO-SOC in policy VIP TO INTERNAL |
+| "Link not valid: link expired / already used" | Links live 30 min and work once | Wait for the next alert, or raise `LINK_TTL_SECONDS` |
+| "Quarantine FAILED … HTTP 401/403" | Token wrong, trusthost or profile | Stage 4 API-user section; `./setup.sh --fgt-token <TOKEN>` |
+| "Quarantine FAILED … cannot read group" | Group SOC-Quarantine missing | Create it (Stage 4) |
+| ntfy says quarantined but Kali still connects | Quarantine policy not at the top, or DRY-RUN | `curl -s :8091/health` (dry_run false); FortiGate policy order |
+| Forgot the Grafana password | Printed once by setup.sh | `grep GRAFANA_ADMIN_PASSWORD .env` |

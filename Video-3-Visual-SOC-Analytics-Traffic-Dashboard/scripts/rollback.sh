@@ -15,7 +15,9 @@ PROJECT_DIR="/opt/${PROJECT_NAME}"
 COMPOSE_DIR="${PROJECT_DIR}/compose"
 MARKER="${PROJECT_DIR}/.setup-installed-tools"
 COMPOSE_PROJECT="visual-soc"
-IMAGES_DEFAULT="timberio/vector:0.36.0-alpine grafana/loki:2.9.4 grafana/grafana:10.3.3"
+IMAGES_DEFAULT="timberio/vector:0.36.0-alpine grafana/loki:2.9.4 grafana/grafana:10.3.3 binwiederhier/ntfy:v2.11.0 python:3.12.7-alpine3.20"
+CONTAINERS="soc-vector soc-loki soc-grafana soc-ntfy soc-responder"
+VOLUMES="vector_data loki_data grafana_data ntfy_cache responder_data"
 
 if [ -t 1 ]; then
     C_B="$(printf '\033[1;36m')"; C_G="$(printf '\033[1;32m')"
@@ -34,7 +36,7 @@ Visual SOC rollback — choose what to remove:
   --all          everything below, in safe order
   --containers   docker compose down (logs + dashboards kept)
   --volumes      down -v: DELETES all stored logs and Grafana data
-  --images       remove the Vector, Loki and Grafana images
+  --images       remove the Vector, Loki, Grafana, ntfy and Python images
   --files        remove ${PROJECT_DIR}
   --tools        remove only what setup.sh installed (docker, compose plugin, curl, sysctl file)
   --yes          do not ask for confirmation
@@ -102,18 +104,32 @@ dc() { (cd "$COMPOSE_DIR" && docker compose "$@"); }
 # Image list from .env when it still exists (keeps rollback in sync with pins)
 IMAGES="$IMAGES_DEFAULT"
 if [ -f "${COMPOSE_DIR}/.env" ]; then
-    from_env="$(sed -n -e 's/^VECTOR_IMAGE=//p' -e 's/^LOKI_IMAGE=//p' -e 's/^GRAFANA_IMAGE=//p' "${COMPOSE_DIR}/.env" | tr '\n' ' ')"
+    from_env="$(sed -n -e 's/^VECTOR_IMAGE=//p' -e 's/^LOKI_IMAGE=//p' -e 's/^GRAFANA_IMAGE=//p' \
+        -e 's/^NTFY_IMAGE=//p' -e 's/^RESPONDER_IMAGE=//p' "${COMPOSE_DIR}/.env" | tr '\n' ' ')"
     [ -n "$from_env" ] && IMAGES="$from_env"
 fi
+
+# --- release active quarantines first (otherwise nobody lifts them later) -----
+release_quarantines() {
+    docker ps --format '{{.Names}}' 2>/dev/null | grep -qx soc-responder || return 0
+    out="$(docker exec soc-responder wget -q -O- --post-data='' http://127.0.0.1:8092/release-all 2>/dev/null || true)"
+    case "$out" in
+        *'"released": {}'*) info "No active quarantines." ;;
+        *'"released"'*)     ok "Released active quarantines on the FortiGate: $out" ;;
+        *) warn "Could not ask the responder to release quarantines. Check the FortiGate group SOC-Quarantine by hand." ;;
+    esac
+}
 
 # --- containers / volumes ----------------------------------------------------
 if [ "$DO_CONTAINERS" -eq 1 ] || [ "$DO_VOLUMES" -eq 1 ]; then
     if have_docker; then
+        release_quarantines
         if [ "$DO_VOLUMES" -eq 1 ]; then
             if ask "Delete containers AND volumes? All stored logs and Grafana data will be lost."; then
                 if have_compose_file; then dc down -v --remove-orphans; else
-                    docker rm -f soc-vector soc-loki soc-grafana >/dev/null 2>&1 || true
-                    for v in vector_data loki_data grafana_data; do
+                    # shellcheck disable=SC2086
+                    docker rm -f $CONTAINERS >/dev/null 2>&1 || true
+                    for v in $VOLUMES; do
                         docker volume rm "${COMPOSE_PROJECT}_${v}" >/dev/null 2>&1 || true
                     done
                 fi
@@ -124,7 +140,8 @@ if [ "$DO_CONTAINERS" -eq 1 ] || [ "$DO_VOLUMES" -eq 1 ]; then
             fi
         else
             if have_compose_file; then dc down --remove-orphans; else
-                docker rm -f soc-vector soc-loki soc-grafana >/dev/null 2>&1 || true
+                # shellcheck disable=SC2086
+                docker rm -f $CONTAINERS >/dev/null 2>&1 || true
             fi
             ok "Containers stopped and removed (volumes kept)."
         fi
@@ -202,3 +219,4 @@ if [ "$DO_TOOLS" -eq 1 ]; then
 fi
 
 ok "Rollback finished."
+info "FortiGate objects (API user, VIPs, policies, group SOC-Quarantine) are not touched — remove them with docs/Fortinet-cli.md (rollback section)."

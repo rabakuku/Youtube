@@ -1,176 +1,87 @@
 <!-- filepath: https://github.com/rabakuku/Youtube/blob/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/docs/Fortinet-gui.md -->
-# FortiGate GUI — Visual SOC "I Attacked My Own SOC" (FortiOS 7.4.12)
+# FortiGate GUI — Visual SOC on FGTQC01 (FortiOS 7.4.12, zone-based)
 
-The same configuration as `docs/Fortinet-cli.md`, in the same order, as click-paths. Names must match exactly — the wallboard and the Vector parser depend on them. Settings marked **CLI-only** cannot be set in the GUI; paste the CLI snippet from `Fortinet-cli.md` for those.
+The same configuration as `docs/Fortinet-cli.md`, in the same order, as click-paths. Names must match exactly. Items marked **CLI-only** have no GUI field — paste that snippet from `Fortinet-cli.md`.
 
-> **Before you start:** if **Security Profiles → Intrusion Prevention** is missing from the menu, enable it under **System → Feature Visibility → Security Features → Intrusion Prevention = ON → Apply**.
-
----
-
-## 0. Check the IPS package
-
-**System → FortiGuard → License Information**
-
-- **Intrusion Prevention** row: note the *IPS Definitions* version and date.
-- Unlicensed VM: the definitions bundled with the firmware still match common attacks. Deny-based panels work regardless.
+> Back up first: user menu (top right) → **Configuration → Backup → Local PC → OK**.
 
 ---
 
-## 1. VLAN sub-interfaces
+## 1. DHCP reservations
 
-**Network → Interfaces → Create New → Interface**
+**Dashboard → Network → DHCP** (widget) → **Expand** → right-click the lease for **192.168.10.2** → **Create DHCP Reservation**. Repeat for **192.168.40.3**.
+Check: **Network → Interfaces → VLAN_QC_10 / VLAN_QC_40 → DHCP Server → Advanced → IP Address Assignment Rules** shows the reserved MAC.
 
-| Field | vlan10-siem | vlan40-kali |
-|---|---|---|
-| Name | `vlan10-siem` | `vlan40-kali` |
-| Alias | `SIEM-Enclave` | `Attack-Zone` |
-| Type | VLAN | VLAN |
-| Interface | `port2` | `port2` |
-| VLAN ID | `10` | `40` |
-| Role | LAN | LAN |
-| Addressing mode | Manual | Manual |
-| IP/Netmask | `192.168.10.1/255.255.255.0` | `192.168.40.1/255.255.255.0` |
-| Administrative Access | PING, HTTPS, SSH | PING only |
+## 2. Admin access
 
-Click **OK** for each. If they already exist, double-click to edit and match the table.
+**Network → Interfaces**:
 
----
+| Interface | Administrative Access |
+|---|---|
+| SERVERS (VLAN_QC_10) | PING, HTTPS, SSH (untick HTTP) |
+| USERS (VLAN_QC_40) | PING only |
 
-## 2. Address objects
+## 3. Addresses and quarantine group
 
 **Policy & Objects → Addresses → Create New → Address**
 
 | Name | Type | IP/Netmask | Comments |
 |---|---|---|---|
-| `SOC-Host` | Subnet | `192.168.10.2/32` | Alpine Docker host - Vector/Loki/Grafana |
-| `Kali-Attacker` | Subnet | `192.168.40.3/32` | Kali traffic generator |
-| `NET-VLAN10-SIEM` | Subnet | `192.168.10.0/24` | |
-| `NET-VLAN40-KALI` | Subnet | `192.168.40.0/24` | |
+| `SOC-Host` | Subnet | 192.168.10.2/32 | Alpine Docker host |
+| `Kali-Attacker` | Subnet | 192.168.40.3/32 | Kali traffic generator |
 
----
+**Create New → Address Group**: Name `SOC-Quarantine`, Members **none**, Comments *Managed by soc-responder*.
 
-## 3. IPS sensor
+## 4. IPS sensor
 
-**Security Profiles → Intrusion Prevention → Create New**
+**Security Profiles → Intrusion Prevention → SOC-Demo-IPS** (already exists): one filter with **Severity** Low/Medium/High/Critical, **Action** Block, **Packet logging** Enable, **Status** Enable; **Block malicious URLs** ON. **CLI-only:** `set extended-log enable`.
 
-| Field | Value |
-|---|---|
-| Name | `SOC-Demo-IPS` |
-| Comments | Visual SOC demo - block and log web attacks against SOC-Host |
-| Block malicious URLs | ON |
+## 5. VIPs
 
-Under **IPS Signatures and Filters → Create New**:
+**Policy & Objects → Virtual IPs → Create New → Virtual IP**
 
-| Field | Value |
-|---|---|
-| Type | Filter |
-| Severity | Low, Medium, High, Critical (select all four) |
-| Action | Block |
-| Packet logging | Enable |
-| Status | Enable |
+| Field | NTFY-TO-SOC | RESPONDER-TO-SOC |
+|---|---|---|
+| Interface | any | any |
+| External IP address | 172.24.66.52 | 172.24.66.52 |
+| Map to IPv4 address | 192.168.10.2 | 192.168.10.2 |
+| Port Forwarding | ON, TCP | ON, TCP |
+| External service port | 8090 | 8091 |
+| Map to IPv4 port | 8090 | 8091 |
 
-Click **OK**, then **OK** again to save the sensor.
+Then **Policy & Objects → Firewall Policy → VIP TO INTERNAL** → **Destination** `+` → add **NTFY-TO-SOC** and **RESPONDER-TO-SOC** → **OK**.
+Recommended: create address `ADMIN-PC` (your PC IP /32) and set it as the **Source** of VIP TO INTERNAL instead of `all`.
 
-**CLI-only:** `set extended-log enable` (adds more fields to IPS logs) and forcing the filter's `status enable` override on some builds — paste section 3 of `Fortinet-cli.md` afterwards to be sure.
+## 6. Policies
 
----
+**6a. Edit policy `USERS TO SERVERS`** → Name `Kali_To_SOC_Web`, Destination `SOC-Host`, Service `HTTP` (keep IPS `SOC-Demo-IPS`, SSL `certificate-inspection`, Log Allowed Traffic *All Sessions*).
 
-## 4. Firewall policies
+**6b. Create New** policies (switch the list to **By Sequence**):
 
-**Policy & Objects → Firewall Policy → Create New** (or double-click an existing ID to edit)
+| Field | SOC_Quarantine_Block | Kali_To_Servers_Deny | Kali_To_WAN_Deny |
+|---|---|---|---|
+| Incoming Interface | any | USERS | USERS |
+| Outgoing Interface | any | SERVERS | WAN |
+| Source | SOC-Quarantine | all | all |
+| Destination | all | all | all |
+| Service | ALL | ALL | ALL |
+| Action | DENY | DENY | DENY |
+| Log Violation Traffic | ON | ON | ON |
 
-### Policy 1 — `Kali_To_Internet`
+The GUI assigns its own IDs; the names are what matter (the CLI guide uses 100–102).
 
-| Field | Value |
-|---|---|
-| Incoming Interface | `vlan40-kali` |
-| Outgoing Interface | `port1` |
-| Source | `NET-VLAN40-KALI` |
-| Destination | `all` |
-| Schedule | `always` |
-| Service | `ALL` |
-| Action | ACCEPT |
-| NAT | ON |
-| Log Allowed Traffic | Security Events |
-| Comments | Tool updates only - never aim attacks at internet targets |
+**6c. Order:** drag **SOC_Quarantine_Block** to the very top; drag **Kali_To_Servers_Deny** directly below **Kali_To_SOC_Web**.
 
-### Policy 2 — `Kali_To_SOC_Web`
+## 7. Syslog
 
-| Field | Value |
-|---|---|
-| Incoming Interface | `vlan40-kali` |
-| Outgoing Interface | `vlan10-siem` |
-| Source | `NET-VLAN40-KALI` |
-| Destination | `SOC-Host` |
-| Schedule | `always` |
-| Service | `HTTP` |
-| Action | ACCEPT |
-| NAT | OFF |
-| Inspection Mode | Flow-based |
-| Security Profiles → IPS | ON → `SOC-Demo-IPS` |
-| SSL Inspection | `certificate-inspection` |
-| Log Allowed Traffic | All Sessions |
-| Generate Logs when Session Starts | ON |
-| Comments | Only door into VLAN 10 - HTTP to Grafana, IPS inspected |
+**Log & Report → Log Settings → Remote Logging and Archiving → Send logs to syslog** ON, IP `192.168.10.2` → Apply. **CLI-only:** mode/port/facility/`source-ip 192.168.10.1`/format and the whole `config log syslogd filter` block.
 
-### Policy 3 — `Kali_To_Servers_Deny`
+## 8. REST API admin
 
-| Field | Value |
-|---|---|
-| Incoming Interface | `vlan40-kali` |
-| Outgoing Interface | `vlan10-siem` |
-| Source | `all` |
-| Destination | `all` |
-| Schedule | `always` |
-| Service | `ALL` |
-| Action | DENY |
-| Log Violation Traffic | ON |
-| Comments | Explicit logged deny - feeds the wallboard |
+1. **System → Admin Profiles → Create New**: Name `soc-quarantine`, set **everything to None** except **Firewall → Custom → Address = Read/Write**.
+2. **System → Administrators → Create New → REST API Admin**: Username `soc-responder`, Administrator profile `soc-quarantine`, **Trusted Hosts** ON → `192.168.10.2/32`, PKI group off → **OK**.
+3. The **API key is shown once** — copy it, then on Alpine: `./setup.sh --fgt-token <KEY>`.
 
-### Policy 4 — `SOC_To_Internet`
+## 9. Smoke test
 
-| Field | Value |
-|---|---|
-| Incoming Interface | `vlan10-siem` |
-| Outgoing Interface | `port1` |
-| Source | `SOC-Host` |
-| Destination | `all` |
-| Schedule | `always` |
-| Service | `DNS`, `HTTP`, `HTTPS`, `NTP`, `PING` |
-| Action | ACCEPT |
-| NAT | ON |
-| Log Allowed Traffic | Security Events |
-| Comments | Alpine updates and container image pulls |
-
-### Order
-
-Switch the list to **Sequence Grouping** (or **By Sequence**) view and drag **Kali_To_SOC_Web (2)** above **Kali_To_Servers_Deny (3)**. Disable or delete any older allow-all policy between `vlan40-kali` and `vlan10-siem`.
-
----
-
-## 5. Syslog to Vector
-
-**Log & Report → Log Settings → Remote Logging and Archiving**
-
-| Field | Value |
-|---|---|
-| Send logs to syslog | ON |
-| IP Address/FQDN | `192.168.10.2` |
-
-Click **Apply**.
-
-**CLI-only** (paste section 5 of `Fortinet-cli.md`): `mode udp`, `port 514`, `facility local7`, `source-ip 192.168.10.1`, `format default`, and the whole `config log syslogd filter` block (`severity information`, `forward-traffic enable`, `local-traffic disable`, `multicast-traffic disable`, `sniffer-traffic disable`, `anomaly enable`, `voip disable`).
-
-Also on the same page, under **Log Settings**: set **Event Logging** and **Local Traffic Log** as you like for the GUI; the syslog filter above decides what reaches Vector.
-
----
-
-## 6. Smoke test
-
-**CLI-only:** open the CLI console (top-right `>_` icon) and run `diagnose log test`. Watch **Events (5m)** on the wallboard move within a few seconds.
-
----
-
-## 7. Backup
-
-User menu (top right) → **Configuration → Backup → Local PC → OK**. Store it next to the repo as your known-good lab config.
+CLI console (`>_` top right): `diagnose log test` → wallboard **Events (5m)** moves.

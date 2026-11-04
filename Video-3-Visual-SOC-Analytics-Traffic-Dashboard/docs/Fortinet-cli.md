@@ -1,97 +1,129 @@
 <!-- filepath: https://github.com/rabakuku/Youtube/blob/main/Video-3-Visual-SOC-Analytics-Traffic-Dashboard/docs/Fortinet-cli.md -->
-# FortiGate CLI — Visual SOC "I Attacked My Own SOC" (FortiOS 7.4.12)
+# FortiGate CLI — Visual SOC on FGTQC01 (FortiOS 7.4.12, zone-based)
 
-Paste the blocks **in order** into the FortiGate CLI (SSH or the GUI CLI console). Every name, IP, and policy ID matches `docs/Lab-Matrix.md`.
+Paste the blocks **in order**. Names, IPs and zones match `docs/Lab-Matrix.md` and the live FGTQC01 config:
 
 | Item | Value |
 |---|---|
-| Parent interface | `port2` (802.1Q trunk) |
-| VLAN 10 — SIEM enclave | `vlan10-siem` 192.168.10.1/24 → Alpine 192.168.10.2 |
-| VLAN 40 — attack zone | `vlan40-kali` 192.168.40.1/24 → Kali 192.168.40.3 |
-| WAN | `port1` |
-| Syslog target | 192.168.10.2 UDP 514 (Vector) |
+| Zones | `SERVERS` (VLAN_QC_10, 192.168.10.1/24) · `USERS` (VLAN_QC_40, 192.168.40.1/24) · `WAN` (port1, DHCP 172.24.66.52/24) |
+| Existing policies kept | 2 `SERVERS TO WAN` · 3 `USERS TO SERVERS` (narrowed in step 6) · 4 `VIP TO INTERNAL` (2 VIPs appended) |
+| New policies | 100 `SOC_Quarantine_Block` (top) · 101 `Kali_To_Servers_Deny` · 102 `Kali_To_WAN_Deny` |
+| Kali internet | **None.** Kali never initiates anything toward WAN; inbound SSH through `SSH-TO-KALI` still works |
 
-> **VDOM mode?** If `get system status` shows `Virtual domain configuration: multiple`, run `config vdom` → `edit root` before each block below, and `end` after it. With VDOMs disabled (the default on a lab VM), paste the blocks as they are.
+> Every new policy uses a fixed ID from 100 up (IDs 2–4 are yours; nothing else exists), so no existing policy can be overwritten.
 
 ---
 
-## 0. Check the IPS package (decides whether the IPS half of the demo works)
+## 0. Before you start
 
-**What/why:** The deny-based demo (port scan) works on any license. The web-attack demo needs IPS signatures. A VM without a FortiGuard subscription still has the signature set bundled with the firmware, which is enough for well-known attacks such as Log4Shell, SQL injection and directory traversal.
+**Back up the current config** (it is a work lab):
 
 ```text
-get system status
-diagnose autoupdate versions | grep -A4 "IPS Attack Engine"
+execute backup config ftp fgtqc01-before-visual-soc.conf <FTP_SERVER_IP> <USER> <PASSWORD>
+```
+
+or GUI: user menu (top right) → **Configuration → Backup → Local PC**.
+
+**Check VDOM mode and the IPS package:**
+
+```text
+get system status | grep -i "virtual domain"
 diagnose autoupdate versions | grep -A4 "IPS Attack Signature"
+get system settings | grep firewall-session-dirty
 ```
 
-Optional, only if you have a valid subscription:
-
-```text
-execute update-now
-```
+- `Virtual domain configuration: disable` → paste the blocks as they are (`multiple` → `config vdom` / `edit root` first).
+- `firewall-session-dirty: check-all` (the default) → when Kali is quarantined, its **existing** sessions are re-checked and dropped too.
 
 ---
 
-## 1. VLAN sub-interfaces on port2
+## 1. Pin the lab IPs (DHCP reservations)
 
-**What/why:** Two trust boundaries on one trunk. All VLAN 40 → VLAN 10 traffic is forced through a firewall policy. Admin access is limited: no HTTP management anywhere, and only `ping` on the attack-zone interface so Kali cannot reach the FortiGate GUI/SSH.
+**What/why:** Alpine (.10.2) and Kali (.40.3) currently get their addresses from the FortiGate DHCP pools. The VIPs, policies and the responder allowlist point at those exact IPs, so they must never change.
+
+Get the MAC addresses:
 
 ```text
-config system interface
-    edit "vlan10-siem"
-        set vdom "root"
-        set alias "SIEM-Enclave"
-        set ip 192.168.10.1 255.255.255.0
-        set allowaccess ping https ssh
-        set role lan
-        set interface "port2"
-        set vlanid 10
+execute dhcp lease-list
+```
+
+Then reserve them (replace the two MACs with the ones from the lease list):
+
+```text
+config system dhcp server
+    edit 3
+        config reserved-address
+            edit 0
+                set ip 192.168.10.2
+                set mac <ALPINE_MAC>
+                set description "soc-alpine Visual SOC"
+            next
+        end
     next
-    edit "vlan40-kali"
-        set vdom "root"
-        set alias "Attack-Zone"
-        set ip 192.168.40.1 255.255.255.0
-        set allowaccess ping
-        set role lan
-        set interface "port2"
-        set vlanid 40
+    edit 2
+        config reserved-address
+            edit 0
+                set ip 192.168.40.3
+                set mac <KALI_MAC>
+                set description "kali Visual SOC attacker"
+            next
+        end
     next
 end
 ```
 
-> If you manage the FortiGate from Kali today, keep `https ssh` on `vlan40-kali` while you build the lab, then remove them before recording — or manage it from port1 / the EVE-NG console.
+> port1 is also DHCP (172.24.66.52 is your Grafana VIP address). Ask whoever runs the 172.24.66.0/24 network to reserve that address for the FortiGate's port1 MAC (`get hardware nic port1 | grep -i hwaddr`), or every VIP breaks when the lease changes.
 
 ---
 
-## 2. Address objects
+## 2. Admin access on the lab interfaces
 
-**What/why:** Policy 2 must allow HTTP to exactly one host, not the whole VLAN. Named objects also make the log lines and the wallboard easier to read.
+**What/why:** the attacker VLAN must not see the firewall's login page. `VLAN_QC_10` keeps HTTPS (the responder calls the REST API on 192.168.10.1) and SSH; plain HTTP admin is removed from both.
+
+```text
+config system interface
+    edit "VLAN_QC_10"
+        set allowaccess ping https ssh
+    next
+    edit "VLAN_QC_40"
+        set allowaccess ping
+    next
+end
+```
+
+> Make sure you manage FGTQC01 from port1/WAN (not from Kali) before pasting this.
+
+---
+
+## 3. Address objects and the quarantine group
+
+**What/why:** `SOC-Host` lets policy 3 allow HTTP to exactly one server. `SOC-Quarantine` is the group the responder fills with `Q-<ip>` objects; FortiOS does not allow an empty group, so it permanently contains the built-in `none` (0.0.0.0/32).
 
 ```text
 config firewall address
     edit "SOC-Host"
-        set comment "Alpine Docker host - Vector/Loki/Grafana"
+        set comment "Alpine Docker host - Vector/Loki/Grafana/ntfy/responder"
         set subnet 192.168.10.2 255.255.255.255
     next
     edit "Kali-Attacker"
         set comment "Kali traffic generator"
         set subnet 192.168.40.3 255.255.255.255
     next
-    edit "NET-VLAN10-SIEM"
-        set subnet 192.168.10.0 255.255.255.0
-    next
-    edit "NET-VLAN40-KALI"
-        set subnet 192.168.40.0 255.255.255.0
+end
+
+config firewall addrgrp
+    edit "SOC-Quarantine"
+        set comment "Managed by soc-responder - members Q-<ip> are blocked everywhere"
+        set member "none"
     next
 end
 ```
 
 ---
 
-## 3. IPS sensor `SOC-Demo-IPS`
+## 4. IPS sensor `SOC-Demo-IPS`
 
-**What/why:** Inspects the one port Kali is allowed to reach (HTTP 80) and **blocks** every low-to-critical signature match. `set status enable` forces on signatures that are disabled by default (several scanner signatures are), which makes the demo reliable. `log-packet` stores the offending packet for the FortiGate GUI.
+**What/why:** policy 3 already uses this sensor. This block (re)applies the demo settings — block and log every low-to-critical signature on the one allowed port. Lab-only: production would use the `default` sensor.
 
 ```text
 config ips sensor
@@ -112,99 +144,146 @@ config ips sensor
 end
 ```
 
-> Forcing every low-and-above signature on is a **lab-only** setting. In production use the `default` sensor or tune by severity/target to avoid false positives.
+---
+
+## 5. Two new VIPs for the admin PC
+
+**What/why:** your PC reaches ntfy (alerts + buttons) and the responder (where the buttons send their request) through port1, next to the existing `HTTP-TO-Grafana` (8080). Same port inside and out.
+
+```text
+config firewall vip
+    edit "NTFY-TO-SOC"
+        set comment "ntfy web app on SOC-Host"
+        set extip 172.24.66.52
+        set mappedip "192.168.10.2"
+        set extintf "any"
+        set portforward enable
+        set extport 8090
+        set mappedport 8090
+    next
+    edit "RESPONDER-TO-SOC"
+        set comment "soc-responder signed button links"
+        set extip 172.24.66.52
+        set mappedip "192.168.10.2"
+        set extintf "any"
+        set portforward enable
+        set extport 8091
+        set mappedport 8091
+    next
+end
+
+config firewall policy
+    edit 4
+        append dstaddr "NTFY-TO-SOC" "RESPONDER-TO-SOC"
+    next
+end
+```
+
+**Recommended:** `VIP TO INTERNAL` accepts source `all` from the 172.24.66.x side, so anyone there can reach SSH on Alpine/Kali, ntfy and the responder. Lock it to your PC (replace the IP):
+
+```text
+config firewall address
+    edit "ADMIN-PC"
+        set comment "Admin workstation for the Visual SOC lab"
+        set subnet <YOUR_PC_IP> 255.255.255.255
+    next
+end
+config firewall policy
+    edit 4
+        set srcaddr "ADMIN-PC"
+    next
+end
+```
 
 ---
 
-## 4. Firewall policies (IDs 1–4)
+## 6. Policies
 
-**What/why:**
+### 6a. Narrow policy 3 → `Kali_To_SOC_Web`
 
-| ID | Name | From → To | Action | Logging | Purpose |
-|---|---|---|---|---|---|
-| 1 | Kali_To_Internet | vlan40-kali → port1 | accept + NAT | security events only | Kali tool updates — keeps internet noise off the wallboard |
-| 2 | Kali_To_SOC_Web | vlan40-kali → vlan10-siem | accept, **IPS** | all + session start | Dashboard access; the only door into VLAN 10, and it is inspected |
-| 3 | Kali_To_Servers_Deny | vlan40-kali → vlan10-siem | **deny** | all | Explicit, logged deny — the FortiGate's implicit deny does not log by default |
-| 4 | SOC_To_Internet | vlan10-siem → port1 | accept + NAT | security events only | apk, Docker image pulls, GitHub raw downloads |
-
-If policies 1, 2 or 4 already exist from the old repo or Stage 3, these `edit` commands overwrite them in place.
+**What/why:** today policy 3 accepts **everything** from USERS to SERVERS, so a port scan produces no denies and the *Port scan detected* rule can never fire. It becomes the single door: HTTP to `SOC-Host`, still IPS-inspected. The name changes to match the dashboards.
 
 ```text
 config firewall policy
-    edit 1
-        set name "Kali_To_Internet"
-        set srcintf "vlan40-kali"
-        set dstintf "port1"
-        set action accept
-        set srcaddr "NET-VLAN40-KALI"
+    edit 3
+        set name "Kali_To_SOC_Web"
+        set dstaddr "SOC-Host"
+        set service "HTTP"
+        set comments "Only door into SERVERS - HTTP to Grafana, IPS inspected"
+    next
+end
+```
+
+### 6b. New policies 100–102
+
+| ID | Name | From → To | Action | Why |
+|---|---|---|---|---|
+| 100 | SOC_Quarantine_Block | any → any, source `SOC-Quarantine` | deny + log | Quarantine — must be the **first** policy |
+| 101 | Kali_To_Servers_Deny | USERS → SERVERS | deny + log | Everything except policy 3 — feeds the wallboard |
+| 102 | Kali_To_WAN_Deny | USERS → WAN | deny + log | Kali never reaches WAN; attempts are visible and auditable |
+
+```text
+config firewall policy
+    edit 100
+        set name "SOC_Quarantine_Block"
+        set srcintf "any"
+        set dstintf "any"
+        set action deny
+        set srcaddr "SOC-Quarantine"
         set dstaddr "all"
         set schedule "always"
         set service "ALL"
-        set logtraffic utm
-        set nat enable
-        set comments "Tool updates only - never aim attacks at internet targets"
-    next
-    edit 2
-        set name "Kali_To_SOC_Web"
-        set srcintf "vlan40-kali"
-        set dstintf "vlan10-siem"
-        set action accept
-        set srcaddr "NET-VLAN40-KALI"
-        set dstaddr "SOC-Host"
-        set schedule "always"
-        set service "HTTP"
-        set utm-status enable
-        set inspection-mode flow
-        set ssl-ssh-profile "certificate-inspection"
-        set ips-sensor "SOC-Demo-IPS"
         set logtraffic all
-        set logtraffic-start enable
-        set comments "Only door into VLAN 10 - HTTP to Grafana, IPS inspected"
+        set comments "Visual SOC quarantine - members are added/removed by soc-responder"
     next
-    edit 3
+    edit 101
         set name "Kali_To_Servers_Deny"
-        set srcintf "vlan40-kali"
-        set dstintf "vlan10-siem"
+        set srcintf "USERS"
+        set dstintf "SERVERS"
         set action deny
         set srcaddr "all"
         set dstaddr "all"
         set schedule "always"
         set service "ALL"
         set logtraffic all
-        set comments "Explicit logged deny - feeds the wallboard"
+        set comments "Explicit logged deny - port scans show on the wallboard"
     next
-    edit 4
-        set name "SOC_To_Internet"
-        set srcintf "vlan10-siem"
-        set dstintf "port1"
-        set action accept
-        set srcaddr "SOC-Host"
+    edit 102
+        set name "Kali_To_WAN_Deny"
+        set srcintf "USERS"
+        set dstintf "WAN"
+        set action deny
+        set srcaddr "all"
         set dstaddr "all"
         set schedule "always"
-        set service "DNS" "HTTP" "HTTPS" "NTP" "PING"
-        set logtraffic utm
-        set nat enable
-        set comments "Alpine updates and container image pulls"
+        set service "ALL"
+        set logtraffic all
+        set comments "Kali is never allowed to reach WAN (work-lab rule)"
     next
 end
 ```
 
-**Order matters:** policy 2 must sit **above** policy 3, otherwise the deny catches the dashboard traffic too. New policies are appended at the bottom, so check the order and fix it if needed:
+### 6c. Order
+
+New policies are appended at the bottom. Put the quarantine on top and the deny right after the allow:
 
 ```text
-show firewall policy | grep -E "edit|set name"
 config firewall policy
-    move 2 before 3
+    move 100 before 2
+    move 101 after 3
 end
+show firewall policy | grep -E "^    edit|set name"
 ```
 
-If you have any older allow-all policy between `vlan40-kali` and `vlan10-siem`, delete or disable it — it would hide the deny events.
+Expected order: **100, 2, 3, 101, 4, 102** (101 must come after 3; 102's position does not matter because nothing else matches USERS → WAN).
+
+> Policies with `any` interfaces switch the GUI policy list to **By Sequence** view. That is normal.
 
 ---
 
-## 5. Syslog to Vector (192.168.10.2 UDP 514)
+## 7. Syslog to Vector
 
-**What/why:** Streams traffic and security (IPS) logs to the SIEM in the FortiOS default `key=value` format, which `vector.yaml` parses. `source-ip` pins the sender to the VLAN 10 address so the logs always arrive from 192.168.10.1. Local-traffic logs (sessions to the FortiGate itself) are turned off to keep the wallboard focused on the attack.
+**What/why:** the stack already receives logs; this block makes sure the settings match what Vector parses (default key=value, UDP 514, sent from 192.168.10.1).
 
 ```text
 config log syslogd setting
@@ -228,24 +307,114 @@ config log syslogd filter
 end
 ```
 
-> Security-profile logs (IPS) are always forwarded once syslog is enabled; there is no separate toggle for them in the filter. If a keyword is rejected on your exact build, type `set ?` inside that block to list what your firmware supports.
+---
+
+## 8. REST API admin for the responder
+
+**What/why:** the responder needs exactly one permission — create/delete address objects and edit the `SOC-Quarantine` group. It gets a dedicated profile with **firewall address read-write and nothing else**, and its token is only accepted from 192.168.10.2.
+
+```text
+config system accprofile
+    edit "soc-quarantine"
+        set comments "Visual SOC responder - firewall address objects only"
+        set fwgrp custom
+        config fwgrp-permission
+            set policy none
+            set address read-write
+            set service none
+            set schedule none
+            set others none
+        end
+    next
+end
+
+config system api-user
+    edit "soc-responder"
+        set comments "Visual SOC responder on 192.168.10.2"
+        set accprofile "soc-quarantine"
+        set vdom "root"
+        config trusthost
+            edit 1
+                set ipv4-trusthost 192.168.10.2 255.255.255.255
+            next
+        end
+    next
+end
+
+execute api-user generate-key soc-responder
+```
+
+The last command prints **`New API key: …`** once. Copy it, then on **Alpine**:
+
+```sh
+cd /opt/visual-soc-analytics-traffic-dashboard
+./setup.sh --fgt-token <PASTE_KEY_HERE>
+```
+
+Expected line: `[+] FortiGate API token works and group SOC-Quarantine exists — quarantine is LIVE.`
+
+> If any `fwgrp-permission` keyword is rejected on your build, type `set ?` inside that block: only `address` must be `read-write`.
 
 ---
 
-## 6. Smoke test — generate sample logs
+## 9. Getting scripts onto Kali (no internet)
 
-**What/why:** Makes the FortiGate send a burst of sample traffic, event and UTM logs to every log target. Within seconds the wallboard's **Events (5m)** counter should move. Sample logs use made-up IPs; they age out of the 15-minute panels on their own.
+Kali has no WAN access, so copy files through the existing `SSH-TO-KALI` VIP from your PC or the git box:
+
+```sh
+scp -P 2223 Video-3-Visual-SOC-Analytics-Traffic-Dashboard/scripts/kali-attack-campaign.sh <kali-user>@172.24.66.58:~/
+```
+
+`nmap`, `curl` and `nikto` ship with the standard Kali image, so nothing has to be installed.
+
+---
+
+## 10. Smoke test
 
 ```text
 diagnose log test
 ```
 
+The wallboard's **Events (5m)** moves within seconds (sample logs with fake IPs; they age out of the 15-minute panels).
+
 ---
 
-## 7. Save a backup of the finished config
+## 11. Rollback — remove everything this guide added
 
 ```text
-execute backup config tftp visual-soc-lab.conf <TFTP_SERVER_IP>
+config firewall policy
+    delete 100
+    delete 101
+    delete 102
+    edit 3
+        set name "USERS TO SERVERS"
+        set dstaddr "all"
+        set service "ALL"
+        unset comments
+    next
+    edit 4
+        unselect dstaddr "NTFY-TO-SOC" "RESPONDER-TO-SOC"
+        set srcaddr "all"
+    next
+end
+config system api-user
+    delete "soc-responder"
+end
+config system accprofile
+    delete "soc-quarantine"
+end
+config firewall vip
+    delete "NTFY-TO-SOC"
+    delete "RESPONDER-TO-SOC"
+end
+config firewall addrgrp
+    delete "SOC-Quarantine"
+end
+config firewall address
+    delete "SOC-Host"
+    delete "Kali-Attacker"
+    delete "ADMIN-PC"
+end
 ```
 
-Or from the GUI: user menu (top right) → **Configuration → Backup**. Replace `<TFTP_SERVER_IP>` with your own TFTP server, or use the GUI method.
+Run `./rollback.sh` on Alpine **first** — it releases active quarantines and removes their `Q-<ip>` objects. Any `Q-…` object left over can be deleted with `config firewall address` → `delete "Q-<ip>"`. DHCP reservations and interface admin access are left as they are (remove in `config system dhcp server` / `config system interface` if wanted).
