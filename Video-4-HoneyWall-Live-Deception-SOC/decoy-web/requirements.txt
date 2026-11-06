@@ -1,0 +1,2 @@
+# filepath: https://github.com/rabakuku/Youtube/blob/main/Video-4-HoneyWall-Live-Deception-SOC/decoy-web/requirements.txt
+aiohttp==3.14.5

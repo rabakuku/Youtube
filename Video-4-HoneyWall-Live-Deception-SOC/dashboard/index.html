@@ -1,0 +1,121 @@
+<!-- filepath: https://github.com/rabakuku/Youtube/blob/main/Video-4-HoneyWall-Live-Deception-SOC/dashboard/index.html -->
+<!doctype html>
+<html lang="en" data-theme="hollywood">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HoneyWall — live deception SOC</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2l12 7v14l-12 7-12-7V9z' fill='%2305070a' stroke='%2339ff88' stroke-width='2.5'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-layout="full">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 40 40" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="2.2" style="color: var(--ok)">
+          <path d="M12 4l7 4v8l-7 4-7-4V8z"/>
+          <path d="M28 4l7 4v8l-7 4-7-4V8z"/>
+          <path d="M20 18l7 4v8l-7 4-7-4v-8z" style="color: var(--bad)" stroke="var(--bad)"/>
+        </g>
+      </svg>
+      <span id="title">HoneyWall</span>
+      <span class="sub">live deception SOC</span>
+    </div>
+    <div class="live" id="live" title="FortiGate REST API status">
+      <span class="dot"></span><span id="live-text">Connecting to engine…</span>
+    </div>
+    <nav class="controls" aria-label="Dashboard controls">
+      <button id="btn-theme" title="Switch theme (T)">Theme: hollywood</button>
+      <button id="btn-sound" aria-pressed="true" title="Siren on quarantine (S)">Sound</button>
+      <button id="btn-flash" aria-pressed="true" title="Screen flash on quarantine (F)">Flash</button>
+      <button id="btn-layout" title="Full screen or split screen (L)">Layout: full</button>
+      <button id="btn-llm" aria-pressed="false" title="AI incident reports from the home LLM">AI reports</button>
+      <button id="btn-test" title="Send a test alert to ntfy">Test alert</button>
+      <button id="btn-reset" class="danger" title="Clear the board for the next take (bans and reports stay)">Reset board</button>
+    </nav>
+  </header>
+
+  <main class="grid">
+    <section class="panel" id="p-topo">
+      <h2>Topology <span class="hint" id="topo-hint">Kali → FortiGate VIP → decoy</span></h2>
+      <div class="body" style="padding:0">
+        <svg id="topo" viewBox="0 0 1000 300" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Lab topology"></svg>
+      </div>
+    </section>
+
+    <section class="panel" id="p-clock">
+      <h2>Time to quarantine <span class="hint" id="clock-hint">trigger → FortiGate confirms</span></h2>
+      <div class="body">
+        <div class="clock" id="clock">0.000<span class="unit">s</span></div>
+        <div class="clock-sub" id="clock-sub">Armed. Waiting for the first attacker.</div>
+        <div class="clock-row">
+          <svg id="gauge" viewBox="0 0 200 130" role="img" aria-label="Threat score">
+            <path class="track" d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke-width="16" stroke-linecap="round"/>
+            <path class="fill" id="gauge-fill" d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke-width="16" stroke-linecap="round"/>
+            <text class="val" id="gauge-val" x="100" y="100" text-anchor="middle">0</text>
+            <text class="cap" x="100" y="124" text-anchor="middle">threat score</text>
+          </svg>
+          <div class="scoreboard" id="scoreboard"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="p-term">
+      <h2>Attacker terminal <span class="hint" id="term-hint">mirrored live from the decoy</span></h2>
+      <div class="body" id="term" aria-live="polite"></div>
+    </section>
+
+    <section class="panel" id="p-creds">
+      <h2>Credential wall <span class="hint" id="cred-hint">0 tried</span></h2>
+      <div class="body">
+        <div class="wall" id="wall"></div>
+        <div class="leader" id="leader"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="p-bans">
+      <h2>Banned on FortiGate <span class="hint" id="bans-hint">REST API</span></h2>
+      <div class="body" id="bans"></div>
+    </section>
+
+    <section class="panel" id="p-time">
+      <h2>Event timeline <span class="hint">MITRE ATT&amp;CK tagged</span></h2>
+      <div class="body" id="timeline"></div>
+    </section>
+
+    <section class="panel" id="p-side">
+      <h2>
+        <span id="side-title">Incident reports</span>
+        <span class="tabs">
+          <button id="tab-reports" aria-pressed="true">Reports</button>
+          <button id="tab-replay" aria-pressed="false">Replay</button>
+        </span>
+      </h2>
+      <div class="body" id="side"></div>
+    </section>
+  </main>
+
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="sheet">
+      <header>
+        <h3 id="modal-title"></h3>
+        <div class="actions" id="modal-actions"></div>
+        <button id="modal-close" title="Close (Esc)">Close</button>
+      </header>
+      <div class="content" id="modal-content"></div>
+    </div>
+  </div>
+
+  <div id="flash" aria-hidden="true">
+    <div class="stamp">
+      <div class="big">QUARANTINED</div>
+      <div class="what" id="flash-what"></div>
+    </div>
+  </div>
+
+  <div id="toasts" aria-live="polite"></div>
+  <button class="arm" id="arm" hidden>Click anywhere to arm the siren</button>
+
+  <script src="app.js"></script>
+</body>
+</html>

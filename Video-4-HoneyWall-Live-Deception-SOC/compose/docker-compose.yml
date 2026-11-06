@@ -1,0 +1,257 @@
+# filepath: https://github.com/rabakuku/Youtube/blob/main/Video-4-HoneyWall-Live-Deception-SOC/compose/docker-compose.yml
+# HoneyWall - Live Deception SOC (Video 4)
+# Core services (cowrie-fsbuild, cowrie, engine) always run.
+# Optional services are switched on with COMPOSE_PROFILES in .env:
+#   lite            -> core only
+#   standard        -> core + dashboard + ntfy + web decoy   (video default)
+#   full            -> standard + dozzle
+#   llm-tailscale   -> add-on: tailscale sidecar for the home LLM
+# Example: COMPOSE_PROFILES=standard,llm-tailscale
+
+name: honeywall
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+
+  # One-shot: builds the decoy filesystem (honeytokens + svc_backup user)
+  # on top of Cowrie's bundled fs.pickle, then exits 0.
+  cowrie-fsbuild:
+    image: ${COWRIE_IMAGE}
+    container_name: honeywall-cowrie-fsbuild
+    restart: "no"
+    user: "999:999"
+    network_mode: "none"
+    command: ["/honeywall/build_honeyfs.py"]
+    environment:
+      HONEYFS_SRC: /honeywall/honeyfs
+      HONEYFS_OUT: /cowrie/cowrie-git/var/lib/cowrie/honeywall-fs.pickle
+      DECOY_LEAKED_USER: ${DECOY_LEAKED_USER}
+      DECOY_LEAKED_UID: ${DECOY_LEAKED_UID}
+    volumes:
+      - ./build_honeyfs.py:/honeywall/build_honeyfs.py:ro
+      - ./honeyfs:/honeywall/honeyfs:ro
+      - cowrie-var:/cowrie/cowrie-git/var
+    logging: *default-logging
+
+  # The decoy: srv-corp-ssh01 (published by FortiGate VIP 192.168.40.1:22 -> 192.168.10.2:2222)
+  cowrie:
+    image: ${COWRIE_IMAGE}
+    container_name: honeywall-cowrie
+    restart: unless-stopped
+    depends_on:
+      cowrie-fsbuild:
+        condition: service_completed_successfully
+    ports:
+      - "${COWRIE_HOST_PORT}:2222"
+    environment:
+      TZ: ${TZ}
+      COWRIE_HONEYPOT_HOSTNAME: ${DECOY_HOSTNAME}
+    volumes:
+      - ./cowrie.cfg:/cowrie/cowrie-git/etc/cowrie.cfg:ro
+      - ./userdb.txt:/cowrie/cowrie-git/etc/userdb.txt:ro
+      - cowrie-var:/cowrie/cowrie-git/var
+    healthcheck:
+      # Distroless image: no shell/curl, so probe the SSH listener with Python.
+      test: ["CMD", "/cowrie/cowrie-env/bin/python3", "-c", "import socket; socket.create_connection(('127.0.0.1', 2222), 3).close()"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      honeywall_net:
+        ipv4_address: ${COWRIE_CONTAINER_IP}
+    logging: *default-logging
+
+  # Detection + FortiGate REST enforcement + alerts + reports + live API (source: ../engine, Stage 3)
+  engine:
+    build:
+      context: ../engine
+    image: honeywall-engine:local
+    container_name: honeywall-engine
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      COWRIE_LOG: /cowrie-var/log/cowrie/cowrie.json
+      COWRIE_TTY_DIR: /cowrie-var/lib/cowrie/tty
+      WEB_DECOY_LOG: /decoy-web-log/web.json
+      DATA_DIR: /data
+      ENGINE_LISTEN: 0.0.0.0:8000
+    depends_on:
+      cowrie:
+        condition: service_started
+    expose:
+      - "8000"
+    volumes:
+      - cowrie-var:/cowrie-var:ro
+      - decoy-web-log:/decoy-web-log:ro
+      - honeywall-data:/data
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3).status == 200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      honeywall_net:
+        ipv4_address: ${ENGINE_CONTAINER_IP}
+    logging: *default-logging
+
+  # Web login decoy: fake "Corp Backup Console" (FortiGate VIP 192.168.40.1:80 -> 192.168.10.2:8088)
+  decoy-web:
+    build:
+      context: ../decoy-web
+    image: honeywall-decoy-web:local
+    container_name: honeywall-decoy-web
+    restart: unless-stopped
+    profiles: ["standard", "full"]
+    ports:
+      - "${WEB_DECOY_HOST_PORT}:8088"
+    environment:
+      TZ: ${TZ}
+      WEB_DECOY_LOG: /logs/web.json
+      WEB_DECOY_PORT: "8088"
+      WEB_DECOY_TITLE: ${WEB_DECOY_TITLE}
+      WEB_DECOY_HOSTNAME: ${WEB_DECOY_HOSTNAME}
+      WEB_HONEYTOKENS: ${WEB_HONEYTOKENS}
+      WEB_DECOY_DB_DUMP: /honeyfs/opt/backup/db_dump.sql
+    volumes:
+      - decoy-web-log:/logs
+      - ./honeyfs:/honeyfs:ro
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8088/__honeywall_health', timeout=3).status == 200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      honeywall_net:
+        ipv4_address: ${WEB_DECOY_CONTAINER_IP}
+    logging: *default-logging
+
+  # HoneyWall live SOC dashboard (source: ../dashboard, Stage 3). Proxies /api to the engine.
+  dashboard:
+    build:
+      context: ../dashboard
+    image: honeywall-dashboard:local
+    container_name: honeywall-dashboard
+    restart: unless-stopped
+    profiles: ["standard", "full"]
+    depends_on:
+      engine:
+        condition: service_healthy
+    ports:
+      - "${DASHBOARD_HOST_PORT}:80"
+    environment:
+      TZ: ${TZ}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      honeywall_net:
+        ipv4_address: ${DASHBOARD_CONTAINER_IP}
+    logging: *default-logging
+
+  # Alert feed, viewed as a web page from the Windows PC (WAN VIP 8090)
+  ntfy:
+    image: ${NTFY_IMAGE}
+    container_name: honeywall-ntfy
+    restart: unless-stopped
+    profiles: ["standard", "full"]
+    command: ["serve"]
+    environment:
+      TZ: ${TZ}
+      NTFY_BASE_URL: ${NTFY_BASE_URL}
+    ports:
+      - "${NTFY_HOST_PORT}:80"
+    volumes:
+      - ./ntfy/server.yml:/etc/ntfy/server.yml:ro
+      - ntfy-cache:/var/cache/ntfy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --tries=1 http://127.0.0.1:80/v1/health -O - | grep -Eo '\"healthy\"\\s*:\\s*true' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      honeywall_net:
+        ipv4_address: ${NTFY_CONTAINER_IP}
+    logging: *default-logging
+
+  # Live container logs in the browser (full profile, WAN VIP 9999)
+  dozzle:
+    image: ${DOZZLE_IMAGE}
+    container_name: honeywall-dozzle
+    restart: unless-stopped
+    profiles: ["full"]
+    environment:
+      DOZZLE_HOSTNAME: honeywall
+      DOZZLE_NO_ANALYTICS: "true"
+    ports:
+      - "${DOZZLE_HOST_PORT}:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    healthcheck:
+      test: ["CMD", "/dozzle", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      honeywall_net:
+        ipv4_address: ${DOZZLE_CONTAINER_IP}
+    logging: *default-logging
+
+  # Optional: private path to the home LLM over Tailscale (userspace, no NET_ADMIN needed).
+  # The engine reaches the tailnet through this sidecar's HTTP proxy (LLM_HTTP_PROXY).
+  tailscale:
+    image: ${TAILSCALE_IMAGE}
+    container_name: honeywall-tailscale
+    hostname: ${TS_HOSTNAME}
+    restart: unless-stopped
+    profiles: ["llm-tailscale"]
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY}
+      TS_HOSTNAME: ${TS_HOSTNAME}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "true"
+      TS_OUTBOUND_HTTP_PROXY_LISTEN: "0.0.0.0:1055"
+      TS_SOCKS5_SERVER: "0.0.0.0:1080"
+      TS_EXTRA_ARGS: ${TS_EXTRA_ARGS}
+      TS_ENABLE_HEALTH_CHECK: "true"
+      TS_LOCAL_ADDR_PORT: "127.0.0.1:9002"
+    expose:
+      - "1055"
+      - "1080"
+    volumes:
+      - tailscale-state:/var/lib/tailscale
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9002/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      honeywall_net:
+        ipv4_address: ${TAILSCALE_CONTAINER_IP}
+    logging: *default-logging
+
+networks:
+  honeywall_net:
+    name: honeywall_net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${DOCKER_SUBNET}
+          gateway: ${DOCKER_GATEWAY}
+
+volumes:
+  cowrie-var:
+  decoy-web-log:
+  honeywall-data:
+  ntfy-cache:
+  tailscale-state:

@@ -1,0 +1,7 @@
+# filepath: https://github.com/rabakuku/Youtube/blob/main/Video-4-HoneyWall-Live-Deception-SOC/compose/userdb.txt
+# HoneyWall decoy credential database (Cowrie UserDB: username:x:password)
+# First match wins. Anything NOT listed here is rejected, so:
+#   Act 2 (hydra brute force against root/admin) always fails -> threshold ban
+#   Act 3 (the "leaked" svc_backup credential) gets in -> honeytoken ban
+# This is a deliberately public decoy credential. Keep ASCII only.
+svc_backup:x:Summer2026!
