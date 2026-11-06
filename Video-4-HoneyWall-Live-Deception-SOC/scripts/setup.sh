@@ -312,9 +312,16 @@ summary() {
   printf '  SSH decoy      %s:%s  ->  %s:%s (Cowrie)\n' "$vip" "$(env_get DECOY_VIP_PORT)" "$alp" "$(env_get COWRIE_HOST_PORT)"
   echo "$svcs" | grep -q decoy-web && printf '  Web decoy      http://%s:%s  ->  %s:%s\n' "$vip" "$(env_get WEB_DECOY_VIP_PORT)" "$alp" "$(env_get WEB_DECOY_HOST_PORT)"
   echo
-  printf '  Next: Stage 5 FortiGate config (docs/Fortinet-cli.md), then on Kali:\n'
-  printf '        ./kali-attack-campaign.sh --all\n'
-  printf '  Rehearse now: curl -s -XPOST -d %s http://127.0.0.1/api/test/simulate   (rehearsal mode only)\n' "'{\"act\":\"2\"}'"
+  if [ "$(env_get FGT_SIMULATE)" = true ]; then
+    printf '  Mode: REHEARSAL - play an act without Kali:\n'
+    printf '        curl -s -XPOST -d %s http://127.0.0.1/api/test/simulate\n' "'{\"act\":\"2\"}'"
+    printf '  Go live after Stage 5: ./setup.sh --simulate off\n'
+  elif echo "$h" | grep -q '"fgt_online": true'; then
+    printf '  Mode: LIVE - FortiGate connected. On the Kali console:\n'
+    printf '        ./kali-attack-campaign.sh --all\n'
+  else
+    printf '  Mode: LIVE but the FortiGate is not answering - see docs/Fortinet-cli.md and scripts/vt.md\n'
+  fi
   printf '  Logs:  cd %s/compose && docker compose logs -f engine\n\n' "$BASE"
 }
 

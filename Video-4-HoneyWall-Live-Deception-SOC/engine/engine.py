@@ -82,6 +82,8 @@ CFG = {
     "ban_expiry": env_int("BAN_EXPIRY", 0),
     "close_sessions": env_bool("FGT_CLOSE_SESSIONS", True),
     "never_ban": env_list("NEVER_BAN", "192.168.10.0/24"),
+    # sources whose events are dropped entirely (container healthchecks connect from loopback)
+    "ignore_sources": env_list("IGNORE_SOURCES", "127.0.0.0/8,::1/128"),
     "ban_poll_sec": env_int("BAN_POLL_SEC", 3),
     # rules
     "brute_threshold": env_int("BRUTE_THRESHOLD", 5),
@@ -113,12 +115,26 @@ CFG = {
     "report_delay": env_int("REPORT_DELAY_SEC", 4),
 }
 
-NEVER_BAN_NETS = []
-for _c in CFG["never_ban"]:
+def _nets(cidrs):
+    out = []
+    for c in cidrs:
+        try:
+            out.append(ipaddress.ip_network(c, strict=False))
+        except ValueError:
+            pass
+    return out
+
+
+NEVER_BAN_NETS = _nets(CFG["never_ban"])
+IGNORE_NETS = _nets(CFG["ignore_sources"])
+
+
+def ignored(ip):
     try:
-        NEVER_BAN_NETS.append(ipaddress.ip_network(_c, strict=False))
+        a = ipaddress.ip_address(ip)
     except ValueError:
-        pass
+        return True
+    return any(a.version == n.version and a in n for n in IGNORE_NETS)
 
 # --------------------------------------------------------------------------------------
 # Pretty logs (they look good in `docker compose logs -f engine` on camera)
@@ -783,7 +799,7 @@ def handle_web(raw):
     """Events from the web decoy (decoy-web/decoy_web.py)."""
     eid = raw.get("eventid", "")
     ip = raw.get("src_ip")
-    if not ip:
+    if not ip or ignored(ip):
         return
     t = parse_ts(raw.get("timestamp"))
     sess = raw.get("session", "web")
@@ -869,7 +885,7 @@ def handle(raw):
     ip = raw.get("src_ip")
     if eid.startswith("web."):
         return handle_web(raw)
-    if not ip or not eid.startswith("cowrie."):
+    if not ip or not eid.startswith("cowrie.") or ignored(ip):
         return
     t = parse_ts(raw.get("timestamp"))
     sess = raw.get("session", "")
